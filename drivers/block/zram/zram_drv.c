@@ -1720,7 +1720,7 @@ static int zram_add(void)
 
 	disk_to_dev(zram->disk)->groups = zram_disk_attr_groups;
 	zram->disk->queue->backing_dev_info->capabilities |=
-					BDI_CAP_STABLE_WRITES;
+			(BDI_CAP_STABLE_WRITES | BDI_CAP_SYNCHRONOUS_IO);
 	add_disk(zram->disk);
 
 	strlcpy(zram->compressor, default_compressor, sizeof(zram->compressor));
