@@ -140,6 +140,10 @@ config WLAN_FEATURE_SARV1_TO_SARV2
 	bool "Enable conversion of SAR v1 to v2 feature"
 	default n
 
+config WLAN_FEATURE_FILS
+	bool "Enable FILS_SK feature"
+	default n
+
 config QCACLD_FEATURE_METERING
 	bool "Stats & Quota Metering feature"
 	default n
