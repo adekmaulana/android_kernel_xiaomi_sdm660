@@ -42,3 +42,5 @@ obj-$(CONFIG_CLOCK_CPU_OSM) += clk-cpu-osm.o
 obj-$(CONFIG_CLOCK_QPNP_DIV) += clk-qpnp-div.o
 
 obj-y += mdss/
+
+subdir-ccflags-y += -Wno-self-assign
