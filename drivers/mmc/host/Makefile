@@ -81,3 +81,5 @@ obj-$(CONFIG_MMC_CQ_HCI)		+= cmdq_hci.o
 ifeq ($(CONFIG_CB710_DEBUG),y)
 	CFLAGS-cb710-mmc	+= -DDEBUG
 endif
+
+subdir-ccflags-y += -Wno-logical-not-parentheses
