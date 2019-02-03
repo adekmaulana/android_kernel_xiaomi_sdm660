@@ -741,14 +741,13 @@ static ssize_t writeback_store(struct device *dev,
 		bio.bi_bdev = zram->bdev;
 
 		bio.bi_iter.bi_sector = blk_idx * (PAGE_SIZE >> 9);
-		bio_set_op_attrs(&bio, REQ_OP_WRITE, REQ_SYNC);
 		bio_add_page(&bio, bvec.bv_page, bvec.bv_len,
 				bvec.bv_offset);
 		/*
 		 * XXX: A single page IO would be inefficient for write
 		 * but it would be not bad as starter.
 		 */
-		ret = submit_bio_wait(&bio);
+		ret = submit_bio_wait(REQ_SYNC, &bio);
 		if (ret) {
 			zram_slot_lock(zram, index);
 			zram_clear_flag(zram, index, ZRAM_UNDER_WB);
