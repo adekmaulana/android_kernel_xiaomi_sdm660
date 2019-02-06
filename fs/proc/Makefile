@@ -11,6 +11,7 @@ proc-y       += inode.o root.o base.o generic.o array.o \
 		fd.o
 proc-$(CONFIG_TTY)      += proc_tty.o
 proc-y	+= cmdline.o
+CFLAGS_cmdline.o := -Wframe-larger-than=4096
 proc-y	+= consoles.o
 proc-y	+= cpuinfo.o
 proc-y	+= devices.o
