@@ -2,7 +2,6 @@
  *  thermal.c - Generic Thermal Management Sysfs support.
  *
  *  Copyright (C) 2008 Intel Corp
- * Copyright (C) 2018 XiaoMi, Inc.
  *  Copyright (C) 2008 Zhang Rui <rui.zhang@intel.com>
  *  Copyright (C) 2008 Sujith Thomas <sujith.thomas@intel.com>
  *  Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
@@ -2702,14 +2701,28 @@ thermal_sconfig_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&switch_mode));
 }
 
+#ifdef CONFIG_KERNEL_CUSTOM_WHYRED
+extern int hwc_check_india;
+#endif
 static ssize_t
 thermal_sconfig_store(struct device *dev,
 				      struct device_attribute *attr, const char *buf, size_t len)
 {
 	int val = -1;
+#ifdef CONFIG_KERNEL_CUSTOM_WHYRED
+	struct thermal_zone_device *tz = to_thermal_zone(dev);
+#endif
 
 	val = simple_strtol(buf, NULL, 10);
 
+#ifdef CONFIG_KERNEL_CUSTOM_WHYRED
+	if (0 == val) {
+		if (1 == hwc_check_india)
+			val = 2;
+	}
+
+	dev_err(&tz->device, "hwc_check_india=%d, set sconfig to %d", hwc_check_india, val);
+#endif
 	atomic_set(&switch_mode, val);
 
 	return len;
