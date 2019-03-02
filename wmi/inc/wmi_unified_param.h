@@ -7492,10 +7492,16 @@ struct wmi_hw_filter_req_params {
  * struct wmi_btm_config - BSS Transition Management offload params
  * @vdev_id: VDEV on which the parameters should be applied
  * @btm_offload_config: BTM config
+ * @btm_solicited_timeout: Timeout value for waiting BTM request
+ * @btm_max_attempt_cnt: Maximum attempt for sending BTM query to ESS
+ * @btm_sticky_time: Stick time after roaming to new AP by BTM
  */
 struct wmi_btm_config {
 	uint8_t vdev_id;
 	uint32_t btm_offload_config;
+	uint32_t btm_solicited_timeout;
+	uint32_t btm_max_attempt_cnt;
+	uint32_t btm_sticky_time;
 };
 
 #endif /* _WMI_UNIFIED_PARAM_H_ */
