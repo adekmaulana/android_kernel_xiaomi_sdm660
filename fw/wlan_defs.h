@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, 2018 The Linux Foundation. All rights reserved.*
+ * Copyright (c) 2013-2016, 2018-2019 The Linux Foundation. All rights reserved.*
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -115,6 +115,8 @@
 #define HE_PET_8_USEC            1
 #define HE_PET_16_USEC           2
 
+#define DEFAULT_OFDMA_RU26_COUNT 0
+
 typedef enum {
     MODE_11A        = 0,   /* 11a Mode */
     MODE_11G        = 1,   /* 11b/g Mode */
@@ -206,6 +208,7 @@ typedef enum {
         ((mode) == MODE_11AC_VHT80))
 #endif
 
+#if SUPPORT_11AX
 #define IS_MODE_HE(mode) (((mode) == MODE_11AX_HE20) || \
         ((mode) == MODE_11AX_HE40)     || \
         ((mode) == MODE_11AX_HE80)     || \
@@ -214,6 +217,10 @@ typedef enum {
         ((mode) == MODE_11AX_HE20_2G)  || \
         ((mode) == MODE_11AX_HE40_2G)  || \
         ((mode) == MODE_11AX_HE80_2G))
+#define IS_MODE_HE_2G(mode) (((mode) == MODE_11AX_HE20_2G) || \
+        ((mode) == MODE_11AX_HE40_2G) || \
+        ((mode) == MODE_11AX_HE80_2G))
+#endif /* SUPPORT_11AX */
 
 #define IS_MODE_VHT_2G(mode) (((mode) == MODE_11AC_VHT20_2G) || \
         ((mode) == MODE_11AC_VHT40_2G) || \
