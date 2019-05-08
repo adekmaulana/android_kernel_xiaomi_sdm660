@@ -173,7 +173,7 @@ netdev_tx_t hns_nic_net_xmit_hw(struct net_device *ndev,
 	dev_queue = netdev_get_tx_queue(ndev, skb->queue_mapping);
 	netdev_tx_sent_queue(dev_queue, skb->len);
 
-	netif_trans_update(ndev);
+	ndev->trans_start = jiffies;
 	ndev->stats.tx_bytes += skb->len;
 	ndev->stats.tx_packets++;
 

@@ -180,12 +180,7 @@ endif
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 
 dtb-$(CONFIG_ARCH_SDM660) += sdm660-mtp_whyred.dtb  \
-	sdm636-mtp_whyred.dtb \
-	sdm636-mtp_wayne.dtb \
-	sdm660-mtp_wayne_a1.dtb \
-	sdm660-mtp_wayne.dtb \
-	sdm660-mtp_tulip.dtb  \
-	sdm636-mtp_tulip.dtb
+	sdm636-mtp_whyred.dtb
 
 dtb-$(CONFIG_ARCH_SDM630) += sdm630-rumi.dtb \
 	sdm630-pm660a-rumi.dtb \

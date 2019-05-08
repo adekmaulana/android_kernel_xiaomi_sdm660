@@ -35,6 +35,8 @@
 static char devname[DEV_NAME_LEN];
 
 
+static char devname[DEV_NAME_LEN];
+
 static int msm_jpeg_open(struct inode *inode, struct file *filp)
 {
 	int rc = 0;
@@ -330,6 +332,7 @@ static struct platform_driver msm_jpeg_driver = {
 static int __init msm_jpeg_driver_init(void)
 {
 	int rc;
+
 	rc = platform_driver_register(&msm_jpeg_driver);
 	return rc;
 }

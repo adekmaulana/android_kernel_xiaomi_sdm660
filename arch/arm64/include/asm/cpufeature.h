@@ -37,7 +37,8 @@
 #define ARM64_WORKAROUND_CAVIUM_27456		11
 #define ARM64_HAS_VIRT_HOST_EXTN		12
 #define ARM64_HAS_32BIT_EL0			13
-#define ARM64_NCAPS				14
+#define ARM64_HARDEN_BRANCH_PREDICTOR		14
+#define ARM64_NCAPS				15
 
 #ifndef __ASSEMBLY__
 
@@ -170,7 +171,9 @@ void __init setup_cpu_features(void);
 
 void update_cpu_capabilities(const struct arm64_cpu_capabilities *caps,
 			    const char *info);
+void enable_cpu_capabilities(const struct arm64_cpu_capabilities *caps);
 void check_local_cpu_errata(void);
+void __init enable_errata_workarounds(void);
 
 #ifdef CONFIG_HOTPLUG_CPU
 void verify_local_cpu_capabilities(void);

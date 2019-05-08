@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, 2018, The Linux Foundation. All rights reserved.
  * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -687,8 +687,10 @@ static void cleanup_stats(struct lpm_stats *stats)
 
 	centry = &stats->child;
 	list_for_each_entry_safe_reverse(pos, n, centry, sibling) {
-		if (!list_empty(&pos->child))
+		if (!list_empty(&pos->child)) {
 			cleanup_stats(pos);
+			continue;
+		}
 
 		list_del_init(&pos->child);
 
