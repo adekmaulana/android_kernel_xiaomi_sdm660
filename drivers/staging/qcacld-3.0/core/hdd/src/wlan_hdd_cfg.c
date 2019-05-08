@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -3599,6 +3599,34 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_STA_MIRACAST_MCC_REST_TIME_VAL_MIN,
 		     CFG_STA_MIRACAST_MCC_REST_TIME_VAL_MAX),
 
+	REG_VARIABLE(CFG_STA_SCAN_BURST_DURATION_VAL, WLAN_PARAM_Integer,
+		     struct hdd_config, sta_scan_burst_duration,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_STA_SCAN_BURST_DURATION_VAL_DEFAULT,
+		     CFG_STA_SCAN_BURST_DURATION_VAL_MIN,
+		     CFG_STA_SCAN_BURST_DURATION_VAL_MAX),
+
+	REG_VARIABLE(CFG_P2P_SCAN_BURST_DURATION_VAL, WLAN_PARAM_Integer,
+		     struct hdd_config, p2p_scan_burst_duration,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_P2P_SCAN_BURST_DURATION_VAL_DEFAULT,
+		     CFG_P2P_SCAN_BURST_DURATION_VAL_MIN,
+		     CFG_P2P_SCAN_BURST_DURATION_VAL_MAX),
+
+	REG_VARIABLE(CFG_GO_SCAN_BURST_DURATION_VAL, WLAN_PARAM_Integer,
+		     struct hdd_config, go_scan_burst_duration,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_GO_SCAN_BURST_DURATION_VAL_DEFAULT,
+		     CFG_GO_SCAN_BURST_DURATION_VAL_MIN,
+		     CFG_GO_SCAN_BURST_DURATION_VAL_MAX),
+
+	REG_VARIABLE(CFG_AP_SCAN_BURST_DURATION_VAL, WLAN_PARAM_Integer,
+		     struct hdd_config, ap_scan_burst_duration,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_AP_SCAN_BURST_DURATION_VAL_DEFAULT,
+		     CFG_AP_SCAN_BURST_DURATION_VAL_MIN,
+		     CFG_AP_SCAN_BURST_DURATION_VAL_MAX),
+
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	REG_VARIABLE(CFG_SAP_MCC_CHANNEL_AVOIDANCE_NAME,
 		     WLAN_PARAM_Integer,
@@ -4042,6 +4070,30 @@ struct reg_table_entry g_registry_table[] = {
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_DEFAULT,
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MIN,
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MAX),
+
+	REG_VARIABLE(CFG_ROAM_HO_DELAY_FOR_RX_NAME,
+		WLAN_PARAM_Integer, struct hdd_config,
+		ho_delay_for_rx,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_ROAM_HO_DELAY_FOR_RX_DEFAULT,
+		CFG_ROAM_HO_DELAY_FOR_RX_MIN,
+		CFG_ROAM_HO_DELAY_FOR_RX_MAX),
+
+	REG_VARIABLE(CFG_MIN_DELAY_BTW_ROAM_SCAN_NAME,
+		WLAN_PARAM_Integer, struct hdd_config,
+		min_delay_btw_roam_scans,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_MIN_DELAY_BTW_ROAM_SCAN_DEFAULT,
+		CFG_MIN_DELAY_BTW_ROAM_SCAN_MIN,
+		CFG_MIN_DELAY_BTW_ROAM_SCAN_MAX),
+
+	REG_VARIABLE(CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_NAME,
+		WLAN_PARAM_HexInteger, struct hdd_config,
+		roam_trigger_reason_bitmask,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_DEFAULT,
+		CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MIN,
+		CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MAX),
 
 	REG_VARIABLE(CFG_ENABLE_FATAL_EVENT_TRIGGER, WLAN_PARAM_Integer,
 			struct hdd_config, enable_fatal_event,
@@ -5191,6 +5243,154 @@ struct reg_table_entry g_registry_table[] = {
 		CFG_ENABLE_SCORING_FOR_ROAM_MIN,
 		CFG_ENABLE_SCORING_FOR_ROAM_MAX),
 
+	REG_VARIABLE(CFG_OFFLOAD_11K_ENABLE_BITMASK_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, offload_11k_enable_bitmask,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_11K_ENABLE_BITMASK_DEFAULT,
+		     CFG_OFFLOAD_11K_ENABLE_BITMASK_MIN,
+		     CFG_OFFLOAD_11K_ENABLE_BITMASK_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, neighbor_report_offload_params_bitmask,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, neighbor_report_offload_time_offset,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, neighbor_report_offload_low_rssi_offset,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config,
+		     neighbor_report_offload_bmiss_count_trigger,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config,
+		     neighbor_report_offload_per_threshold_offset,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, neighbor_report_offload_cache_timeout,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_MAX),
+
+	REG_VARIABLE(CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, neighbor_report_offload_max_req_cap,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_DEFAULT,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_MIN,
+		     CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_MAX),
+
+	REG_VARIABLE(CFG_TX_SCH_DELAY_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, enable_tx_sch_delay,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_TX_SCH_DELAY_DEFAULT,
+		     CFG_TX_SCH_DELAY_MIN,
+		     CFG_TX_SCH_DELAY_MAX),
+
+	REG_VARIABLE(CFG_BTM_ENABLE_NAME, WLAN_PARAM_HexInteger,
+		     struct hdd_config, btm_offload_config,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_BTM_ENABLE_DEFAULT,
+		     CFG_BTM_ENABLE_MIN,
+		     CFG_BTM_ENABLE_MAX),
+
+	REG_VARIABLE(CFG_FORCE_RSNE_OVERRIDE_NAME, WLAN_PARAM_Integer,
+		     struct hdd_config, force_rsne_override,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_FORCE_RSNE_OVERRIDE_DEFAULT,
+		     CFG_FORCE_RSNE_OVERRIDE_MIN,
+		     CFG_FORCE_RSNE_OVERRIDE_MAX),
+
+	REG_VARIABLE(CFG_ROAM_FORCE_RSSI_TRIGGER_NAME,
+		     WLAN_PARAM_Integer, struct hdd_config,
+		     roam_force_rssi_trigger,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_ROAM_FORCE_RSSI_TRIGGER_DEFAULT,
+		     CFG_ROAM_FORCE_RSSI_TRIGGER_MIN,
+		     CFG_ROAM_FORCE_RSSI_TRIGGER_MAX),
+
+	REG_VARIABLE(CFG_BTM_SOLICITED_TIMEOUT, WLAN_PARAM_Integer,
+				 struct hdd_config, btm_solicited_timeout,
+				 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+				 CFG_BTM_SOLICITED_TIMEOUT_DEFAULT,
+				 CFG_BTM_SOLICITED_TIMEOUT_MIN,
+				 CFG_BTM_SOLICITED_TIMEOUT_MAX),
+
+	REG_VARIABLE(CFG_BTM_MAX_ATTEMPT_CNT, WLAN_PARAM_Integer,
+			 struct hdd_config, btm_max_attempt_cnt,
+				 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+				 CFG_BTM_MAX_ATTEMPT_CNT_DEFAULT,
+				 CFG_BTM_MAX_ATTEMPT_CNT_MIN,
+				 CFG_BTM_MAX_ATTEMPT_CNT_MAX),
+
+	REG_VARIABLE(CFG_BTM_STICKY_TIME, WLAN_PARAM_Integer,
+				 struct hdd_config, btm_sticky_time,
+				 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+				 CFG_BTM_STICKY_TIME_DEFAULT,
+				 CFG_BTM_STICKY_TIME_MIN,
+				 CFG_BTM_STICKY_TIME_MAX),
+
+	REG_VARIABLE(CFG_BTM_QUERY_BITMASK_NAME,
+		     WLAN_PARAM_HexInteger, struct hdd_config,
+		     btm_query_bitmask,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_BTM_QUERY_BITMASK_DEFAULT,
+		     CFG_BTM_QUERY_BITMASK_MIN,
+		     CFG_BTM_QUERY_BITMASK_MAX),
+
+	REG_VARIABLE(CFG_ENABLE_UNIT_TEST_FRAMEWORK_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, is_unit_test_framework_enabled,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_ENABLE_UINT_TEST_FRAMEWORK_DEFAULT,
+		     CFG_ENABLE_UNIT_TEST_FRAMEWORK_MIN,
+		     CFG_ENABLE_UNIT_TEST_FRAMEWORK_MAX),
+
+	REG_VARIABLE(CFG_ROAM_PREAUTH_RETRY_COUNT_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, roam_preauth_retry_count,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_ROAM_PREAUTH_RETRY_COUNT_DEFAULT,
+		     CFG_ROAM_PREAUTH_RETRY_COUNT_MIN,
+		     CFG_ROAM_PREAUTH_RETRY_COUNT_MAX),
+
+	REG_VARIABLE(CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_NAME,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, roam_preauth_no_ack_timeout,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_DEFAULT,
+		     CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_MIN,
+		     CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_MAX),
 };
 
 /**
@@ -6048,6 +6248,42 @@ static void hdd_cfg_print_ie_whitelist_attrs(hdd_context_t *hdd_ctx)
 }
 
 /**
+ * hdd_cgf_print_11k_offload_params() - Print 11k offload related parameters
+ * @hdd_ctx: Pointer to HDD context
+ *
+ * Return: None
+ */
+static
+void hdd_cfg_print_11k_offload_params(hdd_context_t *hdd_ctx)
+{
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_11K_ENABLE_BITMASK_NAME,
+		  hdd_ctx->config->offload_11k_enable_bitmask);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_NAME,
+		  hdd_ctx->config->neighbor_report_offload_params_bitmask);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_NAME,
+		  hdd_ctx->config->neighbor_report_offload_time_offset);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_NAME,
+		  hdd_ctx->config->neighbor_report_offload_low_rssi_offset);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_NAME,
+		  hdd_ctx->config->neighbor_report_offload_bmiss_count_trigger);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_NAME,
+		  hdd_ctx->config->
+		  neighbor_report_offload_per_threshold_offset);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_NAME,
+		  hdd_ctx->config->neighbor_report_offload_cache_timeout);
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_NAME,
+		  hdd_ctx->config->neighbor_report_offload_max_req_cap);
+}
+
+/**
  * hdd_cfg_print() - print the hdd configuration
  * @iniTable: pointer to hdd context
  *
@@ -6638,6 +6874,15 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_NAME,
 		pHddCtx->config->roam_bad_rssi_thresh_offset_2g);
 	hdd_debug("Name = [%s] Value = [%u]",
+		CFG_ROAM_HO_DELAY_FOR_RX_NAME,
+		pHddCtx->config->ho_delay_for_rx);
+	hdd_debug("Name = [%s] Value = [%u]",
+		CFG_MIN_DELAY_BTW_ROAM_SCAN_NAME,
+		pHddCtx->config->min_delay_btw_roam_scans);
+	hdd_debug("Name = [%s] Value = [%u]",
+		CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_NAME,
+		pHddCtx->config->roam_trigger_reason_bitmask);
+	hdd_debug("Name = [%s] Value = [%u]",
 		CFG_MIN_REST_TIME_NAME,
 		pHddCtx->config->min_rest_time_conc);
 	hdd_debug("Name = [%s] Value = [%u]",
@@ -6947,6 +7192,39 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 			CFG_OCE_WAN_SCORE_IDX15_TO_12_NAME,
 			pHddCtx->config->oce_wan_score_slots15_to_12);
 
+	hdd_debug("Name = [%s] value = [%d]",
+		  CFG_TX_SCH_DELAY_NAME,
+		  pHddCtx->config->enable_tx_sch_delay);
+
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_FORCE_RSNE_OVERRIDE_NAME,
+		  pHddCtx->config->force_rsne_override);
+
+	hdd_cfg_print_11k_offload_params(pHddCtx);
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_ROAM_FORCE_RSSI_TRIGGER_NAME,
+		  pHddCtx->config->roam_force_rssi_trigger);
+	hdd_debug("Name = [%s] value = [0x%x]",
+		  CFG_ENABLE_UNIT_TEST_FRAMEWORK_NAME,
+		  pHddCtx->config->is_unit_test_framework_enabled);
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_ROAM_PREAUTH_RETRY_COUNT_NAME,
+		  pHddCtx->config->roam_preauth_retry_count);
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_NAME,
+		  pHddCtx->config->roam_preauth_no_ack_timeout);
+	hdd_debug("Name = [%s] value = [0x%x]",
+			  CFG_BTM_ENABLE_NAME,
+			  pHddCtx->config->btm_offload_config);
+	hdd_debug("Name = [btm_solicited_timeout] value = [0x%x]",
+			  pHddCtx->config->btm_solicited_timeout);
+	hdd_debug("Name = [btm_max_attempt_cnt] value = [0x%x]",
+			  pHddCtx->config->btm_max_attempt_cnt);
+	hdd_debug("Name = [btm_sticky_time] value = [0x%x]",
+			  pHddCtx->config->btm_sticky_time);
+
+	hdd_debug("Name = [btm_query_bitmask] value = [0x%x]",
+		  pHddCtx->config->btm_query_bitmask);
 }
 
 /**
@@ -9068,6 +9346,36 @@ static void hdd_update_bss_score_params(struct hdd_config *config,
 }
 
 /**
+ * hdd_update_11k_offload_params() - initializes the 11k offload related params
+ *
+ * @config: pointer to hdd_config structure
+ * @csr_config: pointer to the csr config structure
+ *
+ * Return: None
+ */
+static
+void hdd_update_11k_offload_params(struct hdd_config *config,
+				tCsrConfigParam *csr_config)
+{
+	csr_config->offload_11k_enable_bitmask =
+		config->offload_11k_enable_bitmask;
+	csr_config->neighbor_report_offload.params_bitmask =
+		config->neighbor_report_offload_params_bitmask;
+	csr_config->neighbor_report_offload.time_offset =
+		config->neighbor_report_offload_time_offset;
+	csr_config->neighbor_report_offload.low_rssi_offset =
+		config->neighbor_report_offload_low_rssi_offset;
+	csr_config->neighbor_report_offload.bmiss_count_trigger =
+		config->neighbor_report_offload_bmiss_count_trigger;
+	csr_config->neighbor_report_offload.per_threshold_offset =
+		config->neighbor_report_offload_per_threshold_offset;
+	csr_config->neighbor_report_offload.neighbor_report_cache_timeout =
+		config->neighbor_report_offload_cache_timeout;
+	csr_config->neighbor_report_offload.max_neighbor_report_req_cap =
+		config->neighbor_report_offload_max_req_cap;
+}
+
+/**
  * hdd_set_sme_config() -initializes the sme configuration parameters
  *
  * @pHddCtx: the pointer to hdd context
@@ -9349,6 +9657,14 @@ QDF_STATUS hdd_set_sme_config(hdd_context_t *pHddCtx)
 	smeConfig->csrConfig.f_sta_miracast_mcc_rest_time_val =
 		pHddCtx->config->sta_miracast_mcc_rest_time_val;
 
+	smeConfig->csrConfig.sta_scan_burst_duration =
+		pHddCtx->config->sta_scan_burst_duration;
+	smeConfig->csrConfig.p2p_scan_burst_duration =
+		pHddCtx->config->p2p_scan_burst_duration;
+	smeConfig->csrConfig.go_scan_burst_duration =
+		pHddCtx->config->go_scan_burst_duration;
+	smeConfig->csrConfig.ap_scan_burst_duration =
+		pHddCtx->config->ap_scan_burst_duration;
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	smeConfig->csrConfig.sap_channel_avoidance =
 		pHddCtx->config->sap_channel_avoidance;
@@ -9395,6 +9711,16 @@ QDF_STATUS hdd_set_sme_config(hdd_context_t *pHddCtx)
 		pHddCtx->config->roam_bg_scan_client_bitmap;
 	smeConfig->csrConfig.roam_bad_rssi_thresh_offset_2g =
 		pHddCtx->config->roam_bad_rssi_thresh_offset_2g;
+	smeConfig->csrConfig.ho_delay_for_rx =
+		pHddCtx->config->ho_delay_for_rx;
+	smeConfig->csrConfig.roam_preauth_no_ack_timeout =
+		pHddCtx->config->roam_preauth_no_ack_timeout;
+	smeConfig->csrConfig.roam_preauth_retry_count =
+		pHddCtx->config->roam_preauth_retry_count;
+	smeConfig->csrConfig.min_delay_btw_roam_scans =
+		pHddCtx->config->min_delay_btw_roam_scans;
+	smeConfig->csrConfig.roam_trigger_reason_bitmask =
+		pHddCtx->config->roam_trigger_reason_bitmask;
 	smeConfig->csrConfig.obss_width_interval =
 			pHddCtx->config->obss_width_trigger_interval;
 	smeConfig->csrConfig.obss_active_dwelltime =
@@ -9409,6 +9735,8 @@ QDF_STATUS hdd_set_sme_config(hdd_context_t *pHddCtx)
 			pHddCtx->config->scan_adaptive_dwell_mode;
 	smeConfig->csrConfig.roamscan_adaptive_dwell_mode =
 			pHddCtx->config->roamscan_adaptive_dwell_mode;
+	smeConfig->csrConfig.roam_force_rssi_trigger =
+			pHddCtx->config->roam_force_rssi_trigger;
 
 	hdd_update_per_config_to_sme(pHddCtx, smeConfig);
 
@@ -9476,10 +9804,22 @@ QDF_STATUS hdd_set_sme_config(hdd_context_t *pHddCtx)
 			pHddCtx->config->num_11b_tx_chains;
 	smeConfig->csrConfig.num_11ag_tx_chains =
 			pHddCtx->config->num_11ag_tx_chains;
+	smeConfig->csrConfig.btm_offload_config =
+			pHddCtx->config->btm_offload_config;
+	smeConfig->csrConfig.btm_solicited_timeout =
+					pHddCtx->config->btm_solicited_timeout;
+	smeConfig->csrConfig.btm_max_attempt_cnt =
+					pHddCtx->config->btm_max_attempt_cnt;
+	smeConfig->csrConfig.btm_sticky_time =
+					pHddCtx->config->btm_sticky_time;
+	smeConfig->csrConfig.btm_query_bitmask =
+			pHddCtx->config->btm_query_bitmask;
 
 	hdd_update_bss_score_params(pHddCtx->config,
 			&smeConfig->csrConfig.bss_score_params);
 
+	hdd_update_11k_offload_params(pHddCtx->config,
+					&smeConfig->csrConfig);
 
 	status = sme_update_config(pHddCtx->hHal, smeConfig);
 	if (!QDF_IS_STATUS_SUCCESS(status))

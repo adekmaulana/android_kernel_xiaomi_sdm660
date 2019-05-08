@@ -357,6 +357,7 @@ typedef struct sPESession       /* Added to Support BT-AMP */
 	uint32_t peerAIDBitmap[2];
 	bool tdls_prohibited;
 	bool tdls_chan_swit_prohibited;
+	bool is_tdls_csa;
 #endif
 	bool fWaitForProbeRsp;
 	bool fIgnoreCapsChange;
@@ -509,6 +510,7 @@ typedef struct sPESession       /* Added to Support BT-AMP */
 	bool ch_switch_in_progress;
 	/* previous auth frame's sequence number */
 	uint16_t prev_auth_seq_num;
+	int8_t def_max_tx_pwr;
 } tPESession, *tpPESession;
 
 /*-------------------------------------------------------------------------

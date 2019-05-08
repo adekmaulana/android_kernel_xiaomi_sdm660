@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -252,6 +252,7 @@ int hdd_hif_open(struct device *dev, void *bdev, const struct hif_bus_id *bid,
 		ret = qdf_status_to_os_return(status);
 		goto err_hif_close;
 	} else {
+		cds_set_target_ready(true);
 		ret = hdd_napi_create();
 		hdd_debug("hdd_napi_create returned: %d", ret);
 		if (ret == 0)
@@ -377,18 +378,21 @@ static int wlan_hdd_probe(struct device *dev, void *bdev, const struct hif_bus_i
 	if (ret)
 		goto err_hdd_deinit;
 
-
-	if (reinit) {
-		cds_set_recovery_in_progress(false);
-	} else {
+	/*
+	 * Recovery in progress flag will be set if SSR triggered.
+	 * If SSR is triggered during Load time, this flag will be set
+	 * so reset of this flag should be done in both the cases,
+	 * during load time and during re-init
+	 */
+	cds_set_recovery_in_progress(false);
+	if (!reinit) {
 		cds_set_load_in_progress(false);
 		cds_set_driver_loaded(true);
+		hdd_start_complete(0);
 	}
 
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_INIT);
 	hdd_remove_pm_qos(dev);
-
-	cds_clear_fw_state(CDS_FW_STATE_DOWN);
 
 	cds_set_driver_in_bad_state(false);
 	probe_fail_cnt = 0;
@@ -405,17 +409,15 @@ err_hdd_deinit:
 	    re_init_fail_cnt >= SSR_MAX_FAIL_CNT)
 		QDF_BUG(0);
 
-	if (reinit) {
+	cds_set_recovery_in_progress(false);
+	if (reinit)
 		cds_set_driver_in_bad_state(true);
-		cds_set_recovery_in_progress(false);
-	}
 	else
 		cds_set_load_in_progress(false);
 
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_INIT);
 	hdd_remove_pm_qos(dev);
 
-	cds_clear_fw_state(CDS_FW_STATE_DOWN);
 	hdd_stop_driver_ops_timer();
 	mutex_unlock(&hdd_init_deinit_lock);
 	return ret;
@@ -1293,14 +1295,30 @@ static void hdd_cleanup_on_fw_down(void)
 	ENTER();
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	cds_set_fw_state(CDS_FW_STATE_DOWN);
+	qdf_complete_wait_events();
 	cds_set_target_ready(false);
 	if (hdd_ctx != NULL)
 		hdd_cleanup_scan_queue(hdd_ctx, NULL);
 	wlan_hdd_purge_notifier();
 
 	EXIT();
+}
 
+/**
+ * wlan_hdd_set_the_pld_uevent() - set the pld event
+ * @uevent: uevent status
+ *
+ * Return: void
+ */
+static void wlan_hdd_set_the_pld_uevent(struct pld_uevent_data *uevent)
+{
+	switch (uevent->uevent) {
+	case PLD_RECOVERY:
+		cds_set_recovery_in_progress(true);
+		break;
+	default:
+		return;
+	}
 }
 
 /**
@@ -1313,22 +1331,36 @@ static void hdd_cleanup_on_fw_down(void)
 static void wlan_hdd_pld_uevent(struct device *dev,
 				struct pld_uevent_data *uevent)
 {
+	enum cds_driver_state driver_state;
+
 	ENTER();
 
+	mutex_lock(&hdd_init_deinit_lock);
+
 	hdd_info("pld event %d", uevent->uevent);
+
+	driver_state = cds_get_driver_state();
+
+	if (driver_state == CDS_DRIVER_STATE_UNINITIALIZED ||
+	    cds_is_driver_loading()) {
+		wlan_hdd_set_the_pld_uevent(uevent);
+		goto uevent_not_allowed;
+	}
+
+	wlan_hdd_set_the_pld_uevent(uevent);
+
 	switch (uevent->uevent) {
 	case PLD_RECOVERY:
-		cds_set_recovery_in_progress(true);
+		cds_set_target_ready(false);
 		hdd_pld_ipa_uc_shutdown_pipes();
 		wlan_hdd_purge_notifier();
 		break;
 	case PLD_FW_DOWN:
 		hdd_cleanup_on_fw_down();
 		break;
-	case PLD_FW_READY:
-		cds_set_target_ready(true);
-		break;
 	}
+uevent_not_allowed:
+	mutex_unlock(&hdd_init_deinit_lock);
 
 	EXIT();
 	return;

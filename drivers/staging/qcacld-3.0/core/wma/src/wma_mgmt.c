@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -103,6 +103,12 @@ static void wma_send_bcn_buf_ll(tp_wma_handle wma,
 		WMA_LOGE("%s: Invalid beacon buffer", __func__);
 		return;
 	}
+
+	if (!param_buf->tim_info || !param_buf->p2p_noa_info) {
+		WMA_LOGE("%s: Invalid tim info or p2p noa info", __func__);
+		return;
+	}
+
 	if (WMI_UNIFIED_NOA_ATTR_NUM_DESC_GET(p2p_noa_info) >
 			WMI_P2P_MAX_NOA_DESCRIPTORS) {
 		WMA_LOGE("%s: Too many descriptors %d", __func__,
@@ -1325,12 +1331,12 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 
 	intr->nss = cmd->peer_nss;
 	cmd->peer_phymode = phymode;
-	WMA_LOGD("%s: vdev_id %d associd %d peer_flags %x rate_caps %x peer_caps %x",
-		 __func__,  cmd->vdev_id, cmd->peer_associd, cmd->peer_flags,
+	WMA_LOGI("%s: vdev_id %d associd %d peer_flags %x nss %d phymode %d ht_caps %x",
+		 __func__, cmd->vdev_id, cmd->peer_associd, cmd->peer_flags,
+		 cmd->peer_nss, cmd->peer_phymode, cmd->peer_ht_caps);
+	WMA_LOGD("%s:listen_intval %d max_mpdu %d rate_caps %x peer_caps %x",
+		 __func__, cmd->peer_listen_intval, cmd->peer_max_mpdu,
 		 cmd->peer_rate_caps, cmd->peer_caps);
-	WMA_LOGD("%s:listen_intval %d ht_caps %x max_mpdu %d nss %d phymode %d",
-		 __func__, cmd->peer_listen_intval, cmd->peer_ht_caps,
-		 cmd->peer_max_mpdu, cmd->peer_nss, cmd->peer_phymode);
 	WMA_LOGD("%s: peer_mpdu_density %d encr_type %d cmd->peer_vht_caps %x",
 		 __func__, cmd->peer_mpdu_density, params->encryptType,
 		 cmd->peer_vht_caps);
@@ -2876,31 +2882,24 @@ void wma_process_update_opmode(tp_wma_handle wma_handle,
 			       tUpdateVHTOpMode *update_vht_opmode)
 {
 	struct wma_txrx_node *iface;
-	uint16_t chan_mode;
-
+	wmi_channel_width ch_width;
 
 	iface = &wma_handle->interfaces[update_vht_opmode->smesessionId];
 	if (iface == NULL)
 		return;
 
-	chan_mode = wma_chan_phy_mode(cds_freq_to_chan(iface->mhz),
-				update_vht_opmode->opMode,
-				update_vht_opmode->dot11_mode);
-	if (MODE_UNKNOWN == chan_mode)
+	WMA_LOGD("%s: opMode = %d", __func__, update_vht_opmode->opMode);
+	ch_width = chanmode_to_chanwidth(iface->chanmode);
+	if (ch_width < update_vht_opmode->opMode) {
+		WMA_LOGE("%s: Invalid peer bw update %d, self bw %d",
+				__func__, update_vht_opmode->opMode,
+				ch_width);
 		return;
-
-	WMA_LOGD("%s: opMode = %d, chanMode = %d, dot11mode = %d ",
-			__func__,
-			update_vht_opmode->opMode, chan_mode,
-			update_vht_opmode->dot11_mode);
+	}
 
 	wma_set_peer_param(wma_handle, update_vht_opmode->peer_mac,
-			WMI_PEER_PHYMODE, chan_mode,
-			update_vht_opmode->smesessionId);
-
-	wma_set_peer_param(wma_handle, update_vht_opmode->peer_mac,
-			WMI_PEER_CHWIDTH, update_vht_opmode->opMode,
-			update_vht_opmode->smesessionId);
+			   WMI_PEER_CHWIDTH, update_vht_opmode->opMode,
+			   update_vht_opmode->smesessionId);
 }
 
 /**
@@ -3280,6 +3279,13 @@ int wma_process_rmf_frame(tp_wma_handle wma_handle,
 			cds_pkt_return_packet(rx_pkt);
 			return -EINVAL;
 		}
+	if (qdf_nbuf_len(wbuf) < (sizeof(*wh) + IEEE80211_CCMP_HEADERLEN +
+						IEEE80211_CCMP_MICLEN)) {
+		WMA_LOGE("Buffer length less than expected %d ",
+						(int)qdf_nbuf_len(wbuf));
+		cds_pkt_return_packet(rx_pkt);
+		return -EINVAL;
+	}
 
 		orig_hdr = (uint8_t *) qdf_nbuf_data(wbuf);
 		/* Pointer to head of CCMP header */
@@ -3464,6 +3470,7 @@ end:
 }
 
 #define RATE_LIMIT 16
+#define RESERVE_BYTES   100
 /**
  * wma_mgmt_rx_process() - process management rx frame.
  * @handle: wma handle
@@ -3506,7 +3513,11 @@ static int wma_mgmt_rx_process(void *handle, uint8_t *data,
 		WMA_LOGE("Rx event is NULL");
 		return -EINVAL;
 	}
-
+	if (hdr->buf_len > param_tlvs->num_bufp) {
+		WMA_LOGE("Invalid length of frame hdr->buf_len:%u, param_tlvs->num_bufp:%u",
+			hdr->buf_len, param_tlvs->num_bufp);
+		return -EINVAL;
+	}
 	if (hdr->buf_len < sizeof(struct ieee80211_frame) ||
 		hdr->buf_len > data_len) {
 		limit_prints_invalid_len++;
@@ -3591,9 +3602,28 @@ static int wma_mgmt_rx_process(void *handle, uint8_t *data,
 		qdf_mem_free(rx_pkt);
 		return -EINVAL;
 	}
-
-	/* Why not just use rx_event->hdr.buf_len? */
-	wbuf = qdf_nbuf_alloc(NULL, roundup(hdr->buf_len, 4), 0, 4, false);
+	/*
+	 * Allocate the memory for this rx packet, add extra 100 bytes for:-
+	 *
+	 * 1.  Filling the missing RSN capabilites by some APs, which fill the
+	 *     RSN IE length as extra 2 bytes but dont fill the IE data with
+	 *     capabilities, resulting in failure in unpack core due to length
+	 *     mismatch. Check sir_validate_and_rectify_ies for more info.
+	 *
+	 * 2.  In the API wma_process_rmf_frame(), the driver trims the CCMP
+	 *     header by overwriting the IEEE header to memory occupied by CCMP
+	 *     header, but an overflow is possible if the memory allocated to
+	 *     frame is less than the sizeof(struct ieee80211_frame) +CCMP
+	 *     HEADER len, so allocating 100 bytes would solve this issue too.
+	 *
+	 * 3.  CCMP header is pointing to orig_hdr +
+	 *     sizeof(struct ieee80211_frame) which could also result in OOB
+	 *     access, if the data len is less than
+	 *     sizeof(struct ieee80211_frame), allocating extra bytes would
+	 *     result in solving this issue too.
+	 */
+	wbuf = qdf_nbuf_alloc(NULL, roundup(hdr->buf_len + RESERVE_BYTES,
+							4), 0, 4, false);
 	if (!wbuf) {
 		WMA_LOGE("%s: Failed to allocate wbuf for mgmt rx len(%u)",
 			    __func__, hdr->buf_len);
@@ -3604,6 +3634,9 @@ static int wma_mgmt_rx_process(void *handle, uint8_t *data,
 	qdf_nbuf_put_tail(wbuf, hdr->buf_len);
 	qdf_nbuf_set_protocol(wbuf, ETH_P_CONTROL);
 	wh = (struct ieee80211_frame *)qdf_nbuf_data(wbuf);
+	qdf_mem_zero(((uint8_t *)wh + hdr->buf_len), roundup(hdr->buf_len +
+							RESERVE_BYTES, 4) -
+							hdr->buf_len);
 
 	rx_pkt->pkt_meta.mpdu_hdr_ptr = qdf_nbuf_data(wbuf);
 	rx_pkt->pkt_meta.mpdu_data_ptr = rx_pkt->pkt_meta.mpdu_hdr_ptr +

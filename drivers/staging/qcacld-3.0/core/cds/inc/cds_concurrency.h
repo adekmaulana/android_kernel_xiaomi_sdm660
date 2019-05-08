@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -38,9 +38,10 @@
 
 #include "wlan_hdd_main.h"
 
-#define MAX_NUMBER_OF_CONC_CONNECTIONS 3
-#define DBS_OPPORTUNISTIC_TIME    10
-#define CONNECTION_UPDATE_TIMEOUT 3000
+#define MAX_NUMBER_OF_CONC_CONNECTIONS    3
+#define DBS_OPPORTUNISTIC_TIME            10
+#define CONNECTION_UPDATE_TIMEOUT         3000
+#define CHANNEL_SWITCH_COMPLETE_TIMEOUT   2000
 
 /* Some max value greater than the max length of the channel list */
 #define MAX_WEIGHT_OF_PCL_CHANNELS 255
@@ -1019,4 +1020,26 @@ void cds_remove_dfs_passive_channels_from_pcl(uint8_t *pcl_channels,
  * Return: true or false
  */
 bool cds_is_valid_channel_for_channel_switch(uint8_t channel);
+
+/**
+ * cds_allow_multi_sap_go_concurrency() - check whether multiple SAP/GO
+ * interfaces are allowed
+ * @cds_con_mode: operating mode of the new interface
+ * @channel: operating channel of the new interface
+ * This function checks whether second SAP/GO interface is allowed on the same
+ * MAC.
+ *
+ * Return: true or false
+ */
+bool cds_allow_sap_go_concurrency(enum cds_con_mode mode, uint8_t channel);
+
+/**
+ * cds_set_pcl_for_existing_combo() - Set PCL for existing connection
+ * @mode: Connection mode of type 'cds_con_mode'
+ *
+ * Set the PCL for an existing connection
+ *
+ * Return: None
+ */
+void cds_set_pcl_for_existing_combo(enum cds_con_mode mode);
 #endif /* __CDS_CONCURRENCY_H */

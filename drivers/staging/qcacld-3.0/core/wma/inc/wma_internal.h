@@ -221,6 +221,19 @@ void wma_process_roam_synch_fail(WMA_HANDLE handle,
 
 int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 					uint32_t len);
+
+/**
+ * wma_roam_synch_frame_event_handler() - roam synch frame event handler
+ * @handle: wma handle
+ * @event: event data
+ * @len: length of data
+ *
+ * This function is roam synch frame event handler.
+ *
+ * Return: Success or Failure status
+ */
+int wma_roam_synch_frame_event_handler(void *handle, uint8_t *event,
+					uint32_t len);
 #endif
 
 /**
@@ -1104,12 +1117,12 @@ QDF_STATUS wma_enable_arp_ns_offload(tp_wma_handle wma,
 /**
  * wma_conf_hw_filter_mode() - configure hw filter to the given mode
  * @wma: wma handle
- * @req: hardware filter request
+ * @req: hardware filter request parameters
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS wma_conf_hw_filter_mode(tp_wma_handle wma,
-				   struct hw_filter_request *req);
+				   struct wmi_hw_filter_req_params *req);
 
 QDF_STATUS wma_process_cesium_enable_ind(tp_wma_handle wma);
 

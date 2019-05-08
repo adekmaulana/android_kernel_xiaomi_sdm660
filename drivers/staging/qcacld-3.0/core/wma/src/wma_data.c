@@ -1229,6 +1229,7 @@ void wma_set_linkstate(tp_wma_handle wma, tpLinkStateParams params)
 				 vdev_id);
 			params->status = false;
 			status = QDF_STATUS_E_NOMEM;
+			goto out;
 		}
 		if (wma_send_vdev_stop_to_fw(wma, vdev_id)) {
 			WMA_LOGP("%s: %d Failed to send vdev stop vdev %d",
@@ -2177,7 +2178,8 @@ int wma_ibss_peer_info_event_handler(void *handle, uint8_t *data,
 	}
 
 	/*sanity check */
-	if ((num_peers > 32) || (num_peers > param_tlvs->num_peer_info) ||
+	if (!num_peers || (num_peers > 32) ||
+	    (num_peers > param_tlvs->num_peer_info) ||
 	    (!peer_info)) {
 		WMA_LOGE("%s: Invalid event data from target num_peers %d peer_info %pK",
 			__func__, num_peers, peer_info);
@@ -3030,7 +3032,7 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 		 * @ Discrete : Target Download Complete
 		 */
 		qdf_status =
-			qdf_wait_single_event(&wma_handle->
+			qdf_wait_for_event_completion(&wma_handle->
 					      tx_frm_download_comp_event,
 					      WMA_TX_FRAME_COMPLETE_TIMEOUT);
 

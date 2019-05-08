@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -86,6 +86,8 @@
  * MCL platform.
  */
 #define WMA_SET_VDEV_IE_SOURCE_HOST 0x0
+#define WMI_TLV_HEADER_MASK		0xFFFF0000
+
 
 static const uint8_t arp_ptrn[] = {0x08, 0x06};
 static const uint8_t arp_mask[] = {0xff, 0xff};
@@ -1118,7 +1120,7 @@ QDF_STATUS wma_get_peer_info(WMA_HANDLE handle,
 		WMITLV_TAG_STRUC_wmi_request_stats_cmd_fixed_param,
 		WMITLV_GET_STRUCT_TLVLEN(wmi_request_stats_cmd_fixed_param));
 
-	cmd->stats_id = WMI_REQUEST_PEER_STAT;
+	cmd->stats_id = WMI_REQUEST_PEER_STAT | WMI_REQUEST_PEER_EXTD_STAT;
 	cmd->vdev_id = peer_info_req->sessionid;
 	WMI_CHAR_ARRAY_TO_MAC_ADDR(peer_info_req->peer_macaddr.bytes,
 				&cmd->peer_macaddr);
@@ -1652,10 +1654,10 @@ int wma_nan_rsp_event_handler(void *handle, uint8_t *event_buf,
 	alloc_len = sizeof(tSirNanEvent);
 	alloc_len += nan_rsp_event_hdr->data_len;
 	if (nan_rsp_event_hdr->data_len > ((WMI_SVC_MSG_MAX_SIZE -
-	    sizeof(*nan_rsp_event_hdr)) / sizeof(uint8_t)) ||
+	    WMI_TLV_HDR_SIZE - sizeof(*nan_rsp_event_hdr)) / sizeof(uint8_t)) ||
 	    nan_rsp_event_hdr->data_len > param_buf->num_data) {
-		WMA_LOGE("excess data length:%d", nan_rsp_event_hdr->data_len);
-		QDF_ASSERT(0);
+		WMA_LOGE("excess data length:%d, num_data:%d",
+			nan_rsp_event_hdr->data_len, param_buf->num_data);
 		return -EINVAL;
 	}
 	nan_rsp_event = (tSirNanEvent *) qdf_mem_malloc(alloc_len);
@@ -1965,6 +1967,12 @@ static QDF_STATUS dfs_phyerr_offload_event_handler(void *handle,
 
 	qdf_spin_lock_bh(&ic->chan_lock);
 	chan = ic->ic_curchan;
+	if (chan == NULL) {
+		WMA_LOGE("%s: chan is NULL", __func__);
+		qdf_spin_unlock_bh(&ic->chan_lock);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	if (ic->disable_phy_err_processing) {
 		WMA_LOGD("%s: radar indication done,drop phyerror event",
 			__func__);
@@ -2338,6 +2346,11 @@ QDF_STATUS wma_extract_comb_phyerr_spectral(void *handle, void *data,
 
 	phyerr->bufp = param_tlvs->bufp;
 	phyerr->buf_len = pe_hdr->buf_len;
+	if (phyerr->buf_len > param_tlvs->num_bufp) {
+		WMA_LOGE("Invalid buf_len %d, num_bufp %d",
+				phyerr->buf_len, param_tlvs->num_bufp);
+		return -EINVAL;
+	}
 
 	phyerr->phy_err_mask0 = pe_hdr->rsPhyErrMask0;
 	phyerr->phy_err_mask1 = pe_hdr->rsPhyErrMask1;
@@ -2721,6 +2734,11 @@ static QDF_STATUS spectral_process_phyerr(tp_wma_handle wma, uint8_t *data,
 	combined_rssi = p_rfqual->rssi_comb;
 
 	get_spectral_control_info(wma, &upper_is_control, &lower_is_control);
+
+	if (!wma->dfs_ic || !wma->dfs_ic->ic_curchan) {
+		WMA_LOGE("%s: channel information is not available", __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	if (upper_is_control)
 		rssi_up = control_rssi;
@@ -5343,17 +5361,14 @@ QDF_STATUS wma_enable_d0wow_in_fw(WMA_HANDLE handle)
 		return status;
 	}
 
-	status = qdf_wait_single_event(&wma->target_suspend,
+	status = qdf_wait_for_event_completion(&wma->target_suspend,
 		WMA_TGT_SUSPEND_COMPLETE_TIMEOUT);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		WMA_LOGE("Failed to receive D0-WoW enable HTC ACK from FW! "
 			"Credits: %d, pending_cmds: %d",
 			wmi_get_host_credits(wma->wmi_handle),
 			wmi_get_pending_cmds(wma->wmi_handle));
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		else
-			WMA_LOGE("%s: LOGP is in progress, ignore!", __func__);
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 
 		return status;
 	}
@@ -5369,11 +5384,7 @@ QDF_STATUS wma_enable_d0wow_in_fw(WMA_HANDLE handle)
 		WMA_LOGE("%s: No Credits after HTC ACK:%d, pending_cmds:%d, cannot resume back",
 			 __func__, host_credits, wmi_pending_cmds);
 		htc_dump_counter_info(wma->htc_handle);
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		else
-			WMA_LOGE("%s: SSR in progress, ignore no credit issue",
-				 __func__);
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 	}
 
 	wma->wow.wow_enable_cmd_sent = true;
@@ -5443,7 +5454,7 @@ QDF_STATUS wma_enable_wow_in_fw(WMA_HANDLE handle, uint32_t wow_flags)
 
 	wmi_set_target_suspend(wma->wmi_handle, true);
 
-	if (qdf_wait_single_event(&wma->target_suspend,
+	if (qdf_wait_for_event_completion(&wma->target_suspend,
 				  WMA_TGT_SUSPEND_COMPLETE_TIMEOUT)
 	    != QDF_STATUS_SUCCESS) {
 		WMA_LOGE("Failed to receive WoW Enable Ack from FW");
@@ -5451,11 +5462,7 @@ QDF_STATUS wma_enable_wow_in_fw(WMA_HANDLE handle, uint32_t wow_flags)
 			 wmi_get_host_credits(wma->wmi_handle),
 			 wmi_get_pending_cmds(wma->wmi_handle));
 		wmi_set_target_suspend(wma->wmi_handle, false);
-		if (!cds_is_driver_recovering()) {
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		} else {
-			WMA_LOGE("%s: LOGP is in progress, ignore!", __func__);
-		}
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -5473,11 +5480,7 @@ QDF_STATUS wma_enable_wow_in_fw(WMA_HANDLE handle, uint32_t wow_flags)
 		WMA_LOGE("%s: No Credits after HTC ACK:%d, pending_cmds:%d, cannot resume back",
 			 __func__, host_credits, wmi_pending_cmds);
 		htc_dump_counter_info(wma->htc_handle);
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		else
-			WMA_LOGE("%s: SSR in progress, ignore no credit issue",
-				 __func__);
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 	}
 
 	WMA_LOGD("WOW enabled successfully in fw: credits:%d pending_cmds: %d",
@@ -6208,7 +6211,7 @@ static QDF_STATUS wma_send_host_wakeup_ind_to_fw(tp_wma_handle wma)
 
 	WMA_LOGD("Host wakeup indication sent to fw");
 
-	qdf_status = qdf_wait_single_event(&(wma->wma_resume_event),
+	qdf_status = qdf_wait_for_event_completion(&(wma->wma_resume_event),
 					   WMA_RESUME_TIMEOUT);
 	if (QDF_STATUS_SUCCESS != qdf_status) {
 		WMA_LOGP("%s: Timeout waiting for resume event from FW",
@@ -6216,13 +6219,8 @@ static QDF_STATUS wma_send_host_wakeup_ind_to_fw(tp_wma_handle wma)
 		WMA_LOGP("%s: Pending commands %d credits %d", __func__,
 			 wmi_get_pending_cmds(wma->wmi_handle),
 			 wmi_get_host_credits(wma->wmi_handle));
-		if (!cds_is_driver_recovering()) {
-			wmi_tag_crash_inject(wma->wmi_handle, true);
-			cds_trigger_recovery(CDS_RESUME_TIMEOUT);
-		} else {
-			WMA_LOGE("%s: SSR in progress, ignore resume timeout",
-				 __func__);
-		}
+		wmi_tag_crash_inject(wma->wmi_handle, true);
+		cds_trigger_recovery(CDS_RESUME_TIMEOUT);
 	} else {
 		WMA_LOGD("Host wakeup received");
 	}
@@ -6264,7 +6262,7 @@ QDF_STATUS wma_disable_d0wow_in_fw(WMA_HANDLE handle)
 		return status;
 	}
 
-	status = qdf_wait_single_event(&(wma->wma_resume_event),
+	status = qdf_wait_for_event_completion(&(wma->wma_resume_event),
 				WMA_RESUME_TIMEOUT);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		WMA_LOGP("%s: Timeout waiting for resume event from FW!",
@@ -6272,11 +6270,7 @@ QDF_STATUS wma_disable_d0wow_in_fw(WMA_HANDLE handle)
 		WMA_LOGP("%s: Pending commands: %d credits: %d", __func__,
 			wmi_get_pending_cmds(wma->wmi_handle),
 			wmi_get_host_credits(wma->wmi_handle));
-
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_RESUME_TIMEOUT);
-		else
-			WMA_LOGE("%s: LOGP is in progress, ignore!", __func__);
+		cds_trigger_recovery(CDS_RESUME_TIMEOUT);
 
 		return status;
 	}
@@ -7148,28 +7142,18 @@ QDF_STATUS wma_enable_arp_ns_offload(tp_wma_handle wma,
 }
 
 QDF_STATUS wma_conf_hw_filter_mode(tp_wma_handle wma,
-				   struct hw_filter_request *req)
+				   struct wmi_hw_filter_req_params *req)
 {
 	QDF_STATUS status;
-	uint8_t vdev_id;
 
-	/* Get the vdev id */
-	if (!wma_find_vdev_by_bssid(wma, req->bssid.bytes, &vdev_id)) {
-		WMA_LOGE("vdev handle is invalid for %pM",
-			 req->bssid.bytes);
-		qdf_mem_free(req);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	if (!wma->interfaces[vdev_id].vdev_up) {
+	if (!wma->interfaces[req->vdev_id].vdev_up) {
 		WMA_LOGE("vdev %d is not up skipping enable Broadcast Filter",
-			 vdev_id);
+			 req->vdev_id);
 		qdf_mem_free(req);
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	status = wmi_unified_conf_hw_filter_mode_cmd(wma->wmi_handle, vdev_id,
-						     req->mode_bitmap);
+	status = wmi_unified_conf_hw_filter_mode_cmd(wma->wmi_handle, req);
 	if (QDF_IS_STATUS_ERROR(status))
 		WMA_LOGE("Failed to enable/disable Broadcast Filter");
 
@@ -7972,7 +7956,11 @@ int wma_channel_avoid_evt_handler(void *handle, uint8_t *event,
 		(afr_fixed_param->num_freq_ranges >
 		 SIR_CH_AVOID_MAX_RANGE) ? SIR_CH_AVOID_MAX_RANGE :
 		afr_fixed_param->num_freq_ranges;
-
+	if (num_freq_ranges > param_buf->num_avd_freq_range) {
+		WMA_LOGE("Invalid num_freq_ranges %d, avd_freq_range %d",
+			num_freq_ranges, param_buf->num_avd_freq_range);
+		return -EINVAL;
+	}
 	WMA_LOGD("Channel avoid event received with %d ranges",
 		 num_freq_ranges);
 	for (freq_range_idx = 0; freq_range_idx < num_freq_ranges;
@@ -8172,7 +8160,7 @@ static QDF_STATUS wma_post_runtime_suspend_msg(WMA_HANDLE handle)
 	if (qdf_status != QDF_STATUS_SUCCESS)
 		goto failure;
 
-	if (qdf_wait_single_event(&wma->runtime_suspend,
+	if (qdf_wait_for_event_completion(&wma->runtime_suspend,
 			WMA_TGT_SUSPEND_COMPLETE_TIMEOUT) !=
 			QDF_STATUS_SUCCESS) {
 		WMA_LOGE("Failed to get runtime suspend event");
@@ -8400,12 +8388,6 @@ static inline void wma_suspend_target_timeout(bool is_self_recovery_enabled)
 	if (cds_is_load_or_unload_in_progress())
 		WMA_LOGE("%s: Module (un)loading; Ignoring suspend timeout",
 			 __func__);
-	else if (cds_is_driver_recovering())
-		WMA_LOGE("%s: Module recovering; Ignoring suspend timeout",
-			 __func__);
-	else if (cds_is_driver_in_bad_state())
-		WMA_LOGE("%s: Module in bad state; Ignoring suspend timeout",
-			 __func__);
 	else
 		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 }
@@ -8445,7 +8427,7 @@ QDF_STATUS wma_suspend_target(WMA_HANDLE handle, int disable_target_intr)
 
 	wmi_set_target_suspend(wma_handle->wmi_handle, true);
 
-	if (qdf_wait_single_event(&wma_handle->target_suspend,
+	if (qdf_wait_for_event_completion(&wma_handle->target_suspend,
 				  WMA_TGT_SUSPEND_COMPLETE_TIMEOUT)
 	    != QDF_STATUS_SUCCESS) {
 		WMA_LOGE("Failed to get ACK from firmware for pdev suspend");
@@ -8569,7 +8551,7 @@ QDF_STATUS wma_resume_target(WMA_HANDLE handle)
 	if (QDF_IS_STATUS_ERROR(qdf_status))
 		WMA_LOGE("Failed to send WMI_PDEV_RESUME_CMDID command");
 
-	qdf_status = qdf_wait_single_event(&(wma->wma_resume_event),
+	qdf_status = qdf_wait_for_event_completion(&(wma->wma_resume_event),
 			WMA_RESUME_TIMEOUT);
 	if (QDF_STATUS_SUCCESS != qdf_status) {
 		WMA_LOGP("%s: Timeout waiting for resume event from FW",
@@ -8577,12 +8559,7 @@ QDF_STATUS wma_resume_target(WMA_HANDLE handle)
 		WMA_LOGP("%s: Pending commands %d credits %d", __func__,
 			wmi_get_pending_cmds(wma->wmi_handle),
 			wmi_get_host_credits(wma->wmi_handle));
-		if (!cds_is_driver_recovering()) {
-			cds_trigger_recovery(CDS_RESUME_TIMEOUT);
-		} else {
-			WMA_LOGE("%s: SSR in progress, ignore resume timeout",
-				__func__);
-		}
+		cds_trigger_recovery(CDS_RESUME_TIMEOUT);
 	} else {
 		WMA_LOGD("Host wakeup received");
 	}
@@ -10180,7 +10157,9 @@ int wma_encrypt_decrypt_msg_handler(void *handle, uint8_t *data,
 	encrypt_decrypt_rsp_params.vdev_id = data_event->vdev_id;
 	encrypt_decrypt_rsp_params.status = data_event->status;
 
-	if (data_event->data_length > param_buf->num_enc80211_frame) {
+	if ((data_event->data_length > param_buf->num_enc80211_frame) ||
+	    (data_event->data_length > WMI_SVC_MSG_MAX_SIZE - WMI_TLV_HDR_SIZE -
+	     sizeof(*data_event))) {
 		WMA_LOGE("FW msg data_len %d more than TLV hdr %d",
 			 data_event->data_length,
 			 param_buf->num_enc80211_frame);
@@ -10219,6 +10198,8 @@ int wma_get_arp_stats_handler(void *handle, uint8_t *data,
 {
 	WMI_VDEV_GET_ARP_STAT_EVENTID_param_tlvs *param_buf;
 	wmi_vdev_get_arp_stats_event_fixed_param *data_event;
+	wmi_vdev_get_connectivity_check_stats *connect_stats_event;
+	uint8_t *buf_ptr;
 	struct rsp_stats rsp;
 	tpAniSirGlobal mac = cds_get_context(QDF_MODULE_ID_PE);
 
@@ -10260,7 +10241,23 @@ int wma_get_arp_stats_handler(void *handle, uint8_t *data,
 	rsp.ba_session_establishment_status =
 		data_event->ba_session_establishment_status;
 
-	mac->sme.get_arp_stats_cb(mac->hHdd, &rsp);
+	buf_ptr = (uint8_t *)data_event;
+	buf_ptr = buf_ptr + sizeof(wmi_vdev_get_arp_stats_event_fixed_param) +
+		  WMI_TLV_HDR_SIZE;
+	connect_stats_event = (wmi_vdev_get_connectivity_check_stats *)buf_ptr;
+
+	if (((connect_stats_event->tlv_header & WMI_TLV_HEADER_MASK) >> 16 ==
+	      WMITLV_TAG_STRUC_wmi_vdev_get_connectivity_check_stats)) {
+		rsp.connect_stats_present = true;
+		rsp.tcp_ack_recvd = connect_stats_event->tcp_ack_recvd;
+		rsp.icmpv4_rsp_recvd = connect_stats_event->icmpv4_rsp_recvd;
+		WMA_LOGD("tcp_ack_recvd %d icmpv4_rsp_recvd %d",
+			connect_stats_event->tcp_ack_recvd,
+			connect_stats_event->icmpv4_rsp_recvd);
+	}
+
+	mac->sme.get_arp_stats_cb(mac->hHdd, &rsp,
+				  mac->sme.get_arp_stats_context);
 
 	EXIT();
 
@@ -10593,6 +10590,11 @@ int wma_peer_ant_info_evt_handler(void *handle, u_int8_t *event,
 		return -EINVAL;
 	}
 
+	if (!pmac->sme.pchain_rssi_ind_cb) {
+		WMA_LOGE("%s: callback not registered", __func__);
+		return -EINVAL;
+	}
+
 	param_buf = (WMI_PEER_ANTDIV_INFO_EVENTID_param_tlvs *) event;
 	if (!param_buf) {
 		WMA_LOGE("Invalid peer_ant_info event buffer");
@@ -10618,7 +10620,8 @@ int wma_peer_ant_info_evt_handler(void *handle, u_int8_t *event,
 				peer_ant_info->chain_rssi,
 				sizeof(peer_ant_info->chain_rssi));
 
-	pmac->sme.pchain_rssi_ind_cb(pmac->hHdd, &chain_rssi_result);
+	pmac->sme.pchain_rssi_ind_cb(pmac->hHdd, &chain_rssi_result,
+				     pmac->sme.pchain_rssi_ind_ctx);
 
 	return 0;
 }
@@ -10650,7 +10653,10 @@ void wma_spectral_scan_config(WMA_HANDLE wma_handle,
 
 	if (wma == NULL)
 		return;
-
+	if (!wma_is_vdev_valid(req->vdev_id)) {
+		WMA_LOGE(FL("Invalid vdev id"));
+		return;
+	}
 	/* save the copy of the config params */
 	qdf_mem_copy(&wma->ss_configs, req, sizeof(*req));
 
@@ -10704,6 +10710,12 @@ int wma_rx_aggr_failure_event_handler(void *handle, u_int8_t *event_buf,
 	}
 
 	rx_aggr_hole_event->hole_cnt = rx_aggr_failure_info->num_failure_info;
+	if (rx_aggr_hole_event->hole_cnt > param_buf->num_failure_info) {
+		WMA_LOGE("Invalid no of hole count: %d",
+				rx_aggr_hole_event->hole_cnt);
+		qdf_mem_free(rx_aggr_hole_event);
+		return -EINVAL;
+	}
 	WMA_LOGD("aggr holes_sum: %d\n",
 		 rx_aggr_failure_info->num_failure_info);
 	for (i = 0; i < rx_aggr_hole_event->hole_cnt; i++) {
@@ -10730,4 +10742,52 @@ int wma_rx_aggr_failure_event_handler(void *handle, u_int8_t *event_buf,
 	WMA_LOGD("%s: stats ext event Posted to SME", __func__);
 
 	return 0;
+}
+
+
+bool wma_dual_beacon_on_single_mac_scc_capable(void)
+{
+	tp_wma_handle wma_handle = NULL;
+
+	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
+	if (NULL == wma_handle) {
+		WMA_LOGE("%s : Failed to get wma_handle", __func__);
+		return false;
+	}
+	if (WMI_SERVICE_EXT_IS_ENABLED(wma_handle->wmi_service_bitmap,
+		wma_handle->wmi_service_ext_bitmap,
+		WMI_SERVICE_DUAL_BEACON_ON_SINGLE_MAC_SCC_SUPPORT)) {
+		WMA_LOGD("Support dual beacon on same channel on single MAC");
+		return true;
+	}
+	if (WMI_SERVICE_EXT_IS_ENABLED(wma_handle->wmi_service_bitmap,
+		wma_handle->wmi_service_ext_bitmap,
+		WMI_SERVICE_DUAL_BEACON_ON_SINGLE_MAC_MCC_SUPPORT)) {
+		WMA_LOGD("Support dual beacon on both different and same channel on single MAC");
+		return true;
+	} else {
+		WMA_LOGD("Not support dual beacon on same channel on single MAC");
+		return false;
+	}
+}
+
+bool wma_dual_beacon_on_single_mac_mcc_capable(void)
+{
+	tp_wma_handle wma_handle = NULL;
+
+	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
+	if (NULL == wma_handle) {
+		WMA_LOGE("%s : Failed to get wma_handle", __func__);
+		return false;
+	}
+
+	if (WMI_SERVICE_EXT_IS_ENABLED(wma_handle->wmi_service_bitmap,
+		wma_handle->wmi_service_ext_bitmap,
+		WMI_SERVICE_DUAL_BEACON_ON_SINGLE_MAC_MCC_SUPPORT)) {
+		WMA_LOGD("Support dual beacon on different channel on single MAC");
+		return true;
+	} else {
+		WMA_LOGD("Not support dual beacon on different channel on single MAC");
+		return false;
+	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -300,6 +300,25 @@ typedef struct sHddAvoidFreqList {
  */
 bool hdd_is_ie_valid(const uint8_t *ie, size_t ie_len);
 
+
+#define CONNECTIVITY_CHECK_SET_ARP \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_ARP
+#define CONNECTIVITY_CHECK_SET_DNS \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_DNS
+#define CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE
+#define CONNECTIVITY_CHECK_SET_ICMPV4 \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_ICMPV4
+#define CONNECTIVITY_CHECK_SET_ICMPV6 \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_ICMPV6
+#define CONNECTIVITY_CHECK_SET_TCP_SYN \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_SYN
+#define CONNECTIVITY_CHECK_SET_TCP_SYN_ACK \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_SYN_ACK
+#define CONNECTIVITY_CHECK_SET_TCP_ACK \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_ACK
+
+
 struct cfg80211_bss *wlan_hdd_cfg80211_update_bss_db(hdd_adapter_t *pAdapter,
 						tCsrRoamInfo *pRoamInfo);
 
@@ -440,12 +459,14 @@ void wlan_hdd_rso_cmd_status_cb(void *ctx, struct rso_cmd_status *rso_status);
 
 /**
  * wlan_hdd_cfg80211_chainrssi_callback - chainrssi callback
- * @ctx: hdd context
+ * @hdd_ctx: hdd context
  * @pmsg: pmsg
+ * @context: callback context
  *
  * Return: void
  */
-void wlan_hdd_cfg80211_chainrssi_callback(void *ctx, void *pmsg);
+void wlan_hdd_cfg80211_chainrssi_callback(void *hdd_ctx, void *pmsg,
+					  void *context);
 
 void hdd_rssi_threshold_breached(void *hddctx,
 				 struct rssi_breach_event *data);
@@ -589,6 +610,17 @@ void hdd_process_defer_disconnect(hdd_adapter_t *adapter);
 int wlan_hdd_try_disconnect(hdd_adapter_t *adapter);
 
 /**
+ * wlan_hdd_disconnect() - hdd disconnect api
+ * @pAdapter: Pointer to adapter
+ * @reason: Disconnect reason code
+ *
+ * This function is used to issue a disconnect request to SME
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+int wlan_hdd_disconnect(hdd_adapter_t *pAdapter, u16 reason);
+
+/**
  * hdd_bt_activity_cb() - callback function to receive bt activity
  * @context: HDD context
  * @bt_activity: specifies the kind of bt activity
@@ -644,4 +676,32 @@ void wlan_hdd_save_gtk_offload_params(hdd_adapter_t *adapter,
 					     uint8_t *replay_ctr,
 					     bool big_endian,
 					     uint32_t ul_flags);
+
+/*
+ * wlan_hdd_send_sta_authorized_event() - Function to send station authorized
+ * event to user space in case of SAP
+ * @pAdapter: Pointer to the adapter
+ * @pHddCtx: HDD Context
+ * @mac_addr: MAC address of the STA for which the Authorized event needs to
+ * be sent
+ *
+ * This api is used to send station authorized event to user space
+ *
+ * Return: Returns QDF_STATUS_SUCCESS on success else rturns error value
+ */
+
+QDF_STATUS wlan_hdd_send_sta_authorized_event(
+					hdd_adapter_t *pAdapter,
+					hdd_context_t *pHddCtx,
+					const struct qdf_mac_addr *mac_addr);
+
+/**
+ * wlan_hdd_restore_channels() - Restore the channels which were cached
+ * and disabled in wlan_hdd_disable_channels api.
+ * @hdd_ctx: Pointer to the HDD context
+ *
+ * Return: 0 on success, Error code on failure
+ */
+int wlan_hdd_restore_channels(hdd_context_t *hdd_ctx);
+
 #endif

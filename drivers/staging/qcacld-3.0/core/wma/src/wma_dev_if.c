@@ -637,6 +637,19 @@ QDF_STATUS wma_vdev_detach(tp_wma_handle wma_handle,
 	struct wma_txrx_node *iface = &wma_handle->interfaces[vdev_id];
 	struct wma_target_req *req_msg;
 
+	if (!iface->handle || (!cds_is_target_ready())) {
+		WMA_LOGE("handle of vdev_id %d is NULL vdev is already freed or target is not ready",
+			 vdev_id);
+		pdel_sta_self_req_param->status = status;
+		if (generateRsp) {
+			wma_send_del_sta_self_resp(pdel_sta_self_req_param);
+		} else {
+			qdf_mem_free(pdel_sta_self_req_param);
+			pdel_sta_self_req_param = NULL;
+		}
+		return status;
+	}
+
 	if (qdf_atomic_read(&iface->bss_status) == WMA_BSS_STATUS_STARTED) {
 		req_msg = wma_find_vdev_req(wma_handle, vdev_id,
 				WMA_TARGET_REQ_TYPE_VDEV_STOP, false);
@@ -651,19 +664,6 @@ QDF_STATUS wma_vdev_detach(tp_wma_handle wma_handle,
 		return status;
 	}
 	iface->is_del_sta_defered = false;
-
-	if (!iface->handle) {
-		WMA_LOGE("handle of vdev_id %d is NULL vdev is already freed",
-			 vdev_id);
-		pdel_sta_self_req_param->status = status;
-		if (generateRsp) {
-			wma_send_del_sta_self_resp(pdel_sta_self_req_param);
-		} else {
-			qdf_mem_free(pdel_sta_self_req_param);
-			pdel_sta_self_req_param = NULL;
-		}
-		return status;
-	}
 
 	if (iface->type == WMI_VDEV_TYPE_STA)
 		wma_pno_stop(wma_handle, vdev_id);
@@ -891,13 +891,7 @@ static const wmi_channel_width mode_to_width[MODE_MAX] = {
 #endif
 };
 
-/**
- * chanmode_to_chanwidth() - get channel width through channel mode
- * @chanmode:   channel phy mode
- *
- * Return: channel width
- */
-static wmi_channel_width chanmode_to_chanwidth(WLAN_PHY_MODE chanmode)
+wmi_channel_width chanmode_to_chanwidth(WLAN_PHY_MODE chanmode)
 {
 	wmi_channel_width chan_width;
 
@@ -976,7 +970,6 @@ int wma_vdev_start_resp_handler(void *handle, uint8_t *cmd_param_info,
 			if (resp_event->pdev_id == WMI_PDEV_ID_SOC) {
 				WMA_LOGE("%s: soc level id received for mac id",
 					__func__);
-				QDF_BUG(0);
 				return -EINVAL;
 			}
 			wma->interfaces[resp_event->vdev_id].mac_id =
@@ -1011,7 +1004,8 @@ int wma_vdev_start_resp_handler(void *handle, uint8_t *cmd_param_info,
 	if ((resp_event->vdev_id < wma->max_bssid) &&
 	    (qdf_atomic_read(
 	    &wma->interfaces[resp_event->vdev_id].vdev_restart_params.hidden_ssid_restart_in_progress))
-	    && (wma_is_vdev_in_ap_mode(wma, resp_event->vdev_id) == true)) {
+	    && (wma_is_vdev_in_ap_mode(wma, resp_event->vdev_id) == true)
+	    && (req_msg->msg_type == WMA_HIDDEN_SSID_VDEV_RESTART)) {
 		tpHalHiddenSsidVdevRestart hidden_ssid_restart =
 			(tpHalHiddenSsidVdevRestart)req_msg->user_data;
 		WMA_LOGE("%s: vdev restart event recevied for hidden ssid set using IOCTL",
@@ -1071,10 +1065,10 @@ int wma_vdev_start_resp_handler(void *handle, uint8_t *cmd_param_info,
 			(iface->type == WMI_VDEV_TYPE_STA)) ||
 			((resp_event->resp_type == WMI_VDEV_START_RESP_EVENT) &&
 			 (iface->type == WMI_VDEV_TYPE_MONITOR))) {
+			/* for CSA case firmware expects phymode before ch_wd */
 			err = wma_set_peer_param(wma, iface->bssid,
 					WMI_PEER_PHYMODE, iface->chanmode,
 					resp_event->vdev_id);
-
 			WMA_LOGD("%s:vdev_id %d chanmode %d status %d",
 				__func__, resp_event->vdev_id,
 				iface->chanmode, err);
@@ -1083,7 +1077,6 @@ int wma_vdev_start_resp_handler(void *handle, uint8_t *cmd_param_info,
 			err = wma_set_peer_param(wma, iface->bssid,
 					WMI_PEER_CHWIDTH, chanwidth,
 					resp_event->vdev_id);
-
 			WMA_LOGD("%s:vdev_id %d chanwidth %d status %d",
 				__func__, resp_event->vdev_id,
 				chanwidth, err);
@@ -1784,6 +1777,13 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 	}
 
 	resp_event = param_buf->fixed_param;
+
+	if (resp_event->vdev_id >= wma->max_bssid) {
+		WMA_LOGE("%s: Invalid vdev_id %d from FW",
+			 __func__, resp_event->vdev_id);
+		return -EINVAL;
+	}
+
 	iface = &wma->interfaces[resp_event->vdev_id];
 	wma_release_wakelock(&iface->vdev_stop_wakelock);
 
@@ -1795,8 +1795,7 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 		return -EINVAL;
 	}
 
-	if ((resp_event->vdev_id < wma->max_bssid) &&
-	    (qdf_atomic_read
+	if ((qdf_atomic_read
 		     (&wma->interfaces[resp_event->vdev_id].vdev_restart_params.
 		     hidden_ssid_restart_in_progress))
 	    && ((wma->interfaces[resp_event->vdev_id].type == WMI_VDEV_TYPE_AP)
@@ -1833,14 +1832,6 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 	if (req_msg->msg_type == WMA_DELETE_BSS_REQ) {
 		tpDeleteBssParams params =
 			(tpDeleteBssParams) req_msg->user_data;
-
-		if (resp_event->vdev_id >= wma->max_bssid) {
-			WMA_LOGE("%s: Invalid vdev_id %d", __func__,
-				 resp_event->vdev_id);
-			wma_cleanup_target_req_param(req_msg);
-			status = -EINVAL;
-			goto free_req_msg;
-		}
 
 		if (iface->handle == NULL) {
 			WMA_LOGE("%s vdev id %d is already deleted",
@@ -2681,13 +2672,13 @@ int wma_vdev_delete_handler(void *handle, uint8_t *cmd_param_info,
 				event->vdev_id);
 		return -EINVAL;
 	}
+	qdf_mc_timer_stop(&req_msg->event_timeout);
+	qdf_mc_timer_destroy(&req_msg->event_timeout);
 
 	wma_release_wakelock(&wma->wmi_cmd_rsp_wake_lock);
 
 	/* Send response to upper layers */
 	wma_vdev_detach_callback(req_msg->user_data);
-	qdf_mc_timer_stop(&req_msg->event_timeout);
-	qdf_mc_timer_destroy(&req_msg->event_timeout);
 	qdf_mem_free(req_msg);
 
 	return status;
@@ -2936,6 +2927,11 @@ struct wma_target_req *wma_fill_hold_req(tp_wma_handle wma,
 	struct wma_target_req *req;
 	QDF_STATUS status;
 
+	if (!cds_is_target_ready()) {
+		WMA_LOGE("target not ready, drop the request");
+		return NULL;
+	}
+
 	req = qdf_mem_malloc(sizeof(*req));
 	if (!req) {
 		WMA_LOGE(FL("Failed to allocate memory for msg %d vdev %d"),
@@ -3163,15 +3159,25 @@ void wma_vdev_resp_timer(void *data)
 		params->status = QDF_STATUS_E_TIMEOUT;
 
 		WMA_LOGA("%s: WMA_DEL_STA_SELF_REQ timedout", __func__);
-		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash) == true)
+		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash) == true) {
 			QDF_BUG(0);
-		else
+		} else if (!cds_is_driver_unloading() &&
+			   (cds_is_fw_down() || cds_is_driver_recovering())) {
+			qdf_mem_free(iface->del_staself_req);
+			iface->del_staself_req = NULL;
+		} else {
 			wma_send_del_sta_self_resp(iface->del_staself_req);
+		}
 
-		if (iface->addBssStaContext)
+		if (iface->addBssStaContext) {
 			qdf_mem_free(iface->addBssStaContext);
-		if (iface->staKeyParams)
+			iface->addBssStaContext = NULL;
+		}
+
+		if (iface->staKeyParams) {
 			qdf_mem_free(iface->staKeyParams);
+			iface->staKeyParams = NULL;
+		}
 
 		wma_vdev_deinit(iface);
 		qdf_mem_zero(iface, sizeof(*iface));
@@ -3244,6 +3250,11 @@ struct wma_target_req *wma_fill_vdev_req(tp_wma_handle wma,
 {
 	struct wma_target_req *req;
 	QDF_STATUS status;
+
+	if (!cds_is_target_ready()) {
+		WMA_LOGE("target not ready, drop the request");
+		return NULL;
+	}
 
 	req = qdf_mem_malloc(sizeof(*req));
 	if (!req) {
@@ -3460,6 +3471,7 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 	req.vdev_id = vdev_id;
 	req.chan = add_bss->currentOperChannel;
 	req.chan_width = add_bss->ch_width;
+	req.dot11_mode = add_bss->dot11_mode;
 
 	if (add_bss->ch_width == CH_WIDTH_10MHZ)
 		req.is_half_rate = 1;
@@ -4752,9 +4764,9 @@ static void wma_del_tdls_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 				WMA_DELETE_STA_TIMEOUT);
 		if (!msg) {
 			WMA_LOGE(FL("Failed to allocate vdev_id %d"),
-					peerStateParams->vdevId);
+					del_sta->smesessionId);
 			wma_remove_req(wma,
-					peerStateParams->vdevId,
+					del_sta->smesessionId,
 					WMA_DELETE_STA_RSP_START);
 			del_sta->status = QDF_STATUS_E_NOMEM;
 			goto send_del_rsp;
@@ -4885,8 +4897,12 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 	switch (oper_mode) {
 	case BSS_OPERATIONAL_MODE_STA:
 		wma_delete_sta_req_sta_mode(wma, del_sta);
-		if (wma_is_roam_synch_in_progress(wma, smesession_id))
+		if (wma_is_roam_synch_in_progress(wma, smesession_id)) {
+			WMA_LOGD(FL("LFR3: Del STA on vdev_id %d"),
+				 del_sta->smesessionId);
+			qdf_mem_free(del_sta);
 			return;
+		}
 		if (!rsp_requested) {
 			WMA_LOGD(FL("vdev_id %d status %d"),
 				 del_sta->smesessionId, del_sta->status);
@@ -4915,6 +4931,9 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 	case BSS_OPERATIONAL_MODE_NDI:
 		wma_delete_sta_req_ndi_mode(wma, del_sta);
 		break;
+	default:
+		WMA_LOGE(FL("Incorrect oper mode %d"), oper_mode);
+		qdf_mem_free(del_sta);
 	}
 
 #ifdef QCA_IBSS_SUPPORT
@@ -5070,7 +5089,7 @@ static void wma_wait_tx_complete(tp_wma_handle wma,
 
 	while (ol_txrx_get_tx_pending(pdev) && max_wait_iterations) {
 		WMA_LOGW(FL("Waiting for outstanding packet to drain."));
-		qdf_wait_single_event(&wma->tx_queue_empty_event,
+		qdf_wait_for_event_completion(&wma->tx_queue_empty_event,
 				      WMA_TX_Q_RECHECK_TIMER_WAIT);
 		max_wait_iterations--;
 	}

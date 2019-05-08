@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -274,6 +274,17 @@ typedef enum eSirScanType {
 	eSIR_BEACON_TABLE,
 } tSirScanType;
 
+/* Rsn Capabilities structure */
+struct rsn_caps {
+	uint16_t PreAuthSupported:1;
+	uint16_t NoPairwise:1;
+	uint16_t PTKSAReplayCounter:2;
+	uint16_t GTKSAReplayCounter:2;
+	uint16_t MFPRequired:1;
+	uint16_t MFPCapable:1;
+	uint16_t Reserved:8;
+};
+
 /* / Result codes Firmware return to Host SW */
 typedef enum eSirResultCodes {
 	eSIR_SME_SUCCESS,
@@ -482,6 +493,7 @@ typedef struct sSirSmeReadyReq {
 	void *csr_roam_synch_cb;
 	void *pe_roam_synch_cb;
 	void *sme_msg_cb;
+	void *stop_roaming_cb;
 } tSirSmeReadyReq, *tpSirSmeReadyReq;
 
 /**
@@ -535,16 +547,35 @@ struct sir_set_dual_mac_cfg {
 };
 
 /**
+ * enum set_antenna_mode_status - Status of set antenna mode
+ * command
+ * @SET_ANTENNA_MODE_STATUS_OK: command successful
+ * @SET_ANTENNA_MODE_STATUS_EINVAL: invalid antenna mode
+ * @SET_ANTENNA_MODE_STATUS_ECANCELED: mode change cancelled
+ * @SET_ANTENNA_MODE_STATUS_ENOTSUP: mode not supported
+ */
+enum set_antenna_mode_status {
+	SET_ANTENNA_MODE_STATUS_OK,
+	SET_ANTENNA_MODE_STATUS_EINVAL,
+	SET_ANTENNA_MODE_STATUS_ECANCELED,
+	SET_ANTENNA_MODE_STATUS_ENOTSUP,
+};
+
+typedef void (*antenna_mode_cb)(enum set_antenna_mode_status status,
+				void *context);
+
+/**
  * struct sir_antenna_mode_param - antenna mode param
  * @num_tx_chains: Number of TX chains
  * @num_rx_chains: Number of RX chains
- * @reason: Reason for setting antenna mode
  * @set_antenna_mode_resp: callback to set antenna mode command
+ * @set_antenna_mode_ctx: callback context to set antenna mode command
  */
 struct sir_antenna_mode_param {
 	uint32_t num_tx_chains;
 	uint32_t num_rx_chains;
-	void *set_antenna_mode_resp;
+	antenna_mode_cb set_antenna_mode_resp;
+	void *set_antenna_mode_ctx;
 };
 
 /**
@@ -1297,6 +1328,7 @@ typedef struct sSirSmeJoinReq {
 	bool ignore_assoc_disallowed;
 	bool enable_bcast_probe_rsp;
 	bool force_24ghz_in_ht20;
+	bool force_rsne_override;
 	tSirBssDescription bssDescription;
 	/*
 	 * WARNING: Pls make bssDescription as last variable in struct
@@ -1450,6 +1482,7 @@ typedef struct sSirSmeAssocInd {
 
 	tDot11fIEHTCaps HTCaps;
 	tDot11fIEVHTCaps VHTCaps;
+	tSirMacCapabilityInfo capability_info;
 } tSirSmeAssocInd, *tpSirSmeAssocInd;
 
 /* / Definition for Association confirm */
@@ -1710,6 +1743,7 @@ typedef struct sSirSmeDisassocInd {
 typedef struct sSirSmeDisassocCnf {
 	uint16_t messageType;   /* eWNI_SME_DISASSOC_CNF */
 	uint16_t length;
+	uint8_t sme_session_id;
 	tSirResultCodes statusCode;
 	struct qdf_mac_addr bssid;
 	struct qdf_mac_addr peer_macaddr;
@@ -2877,16 +2911,6 @@ typedef struct sSirNsOffloadReq {
 } tSirNsOffloadReq, *tpSirNsOffloadReq;
 #endif /* WLAN_NS_OFFLOAD */
 
-/**
- * struct hw_filter_request - For enable/disable HW Filter
- * @mode_bitmap: the hardware filter mode to configure
- * @bssid: bss_id for get session.
- */
-struct hw_filter_request {
-	uint8_t mode_bitmap;
-	struct qdf_mac_addr bssid;
-};
-
 typedef struct sSirHostOffloadReq {
 	uint8_t offloadType;
 	uint8_t enableOrDisable;
@@ -3520,6 +3544,7 @@ typedef struct sSirRoamOffloadScanReq {
 	uint8_t OpportunisticScanThresholdDiff;
 	uint8_t RoamRescanRssiDiff;
 	uint8_t RoamRssiDiff;
+	struct rsn_caps rsn_caps;
 	int32_t rssi_abs_thresh;
 	uint8_t ChannelCacheType;
 	uint8_t Command;
@@ -3575,6 +3600,18 @@ typedef struct sSirRoamOffloadScanReq {
 	struct roam_fils_params roam_fils_params;
 #endif
 	struct scoring_param score_params;
+	struct wmi_11k_offload_params offload_11k_params;
+	uint32_t ho_delay_for_rx;
+	uint32_t roam_preauth_retry_count;
+	uint32_t roam_preauth_no_ack_timeout;
+	uint32_t min_delay_btw_roam_scans;
+	uint32_t roam_trigger_reason_bitmask;
+	bool roam_force_rssi_trigger;
+	uint32_t btm_offload_config;
+	uint32_t btm_solicited_timeout;
+	uint32_t btm_max_attempt_cnt;
+	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
 } tSirRoamOffloadScanReq, *tpSirRoamOffloadScanReq;
 
 typedef struct sSirRoamOffloadScanRsp {
@@ -3896,21 +3933,6 @@ struct sir_hw_mode_trans_ind {
  */
 struct sir_dual_mac_config_resp {
 	uint32_t status;
-};
-
-/**
- * enum set_antenna_mode_status - Status of set antenna mode
- * command
- * @SET_ANTENNA_MODE_STATUS_OK: command successful
- * @SET_ANTENNA_MODE_STATUS_EINVAL: invalid antenna mode
- * @SET_ANTENNA_MODE_STATUS_ECANCELED: mode change cancelled
- * @SET_ANTENNA_MODE_STATUS_ENOTSUP: mode not supported
- */
-enum set_antenna_mode_status {
-	SET_ANTENNA_MODE_STATUS_OK,
-	SET_ANTENNA_MODE_STATUS_EINVAL,
-	SET_ANTENNA_MODE_STATUS_ECANCELED,
-	SET_ANTENNA_MODE_STATUS_ENOTSUP,
 };
 
 /**
@@ -4402,6 +4424,11 @@ struct sir_peer_info_req {
  * @rssi: rssi
  * @tx_rate: last tx rate
  * @rx_rate: last rx rate
+ * @rx_mc_bc_cnt: Multicast broadcast packet count received from
+ *              current station
+ * MSB of rx_mc_bc_cnt indicates whether FW supports rx_mc_bc_cnt
+ * feature or not, if first bit is 1 it indictes that FW supports this
+ * feature, if it is 0 it indicates FW doesn't support this feature
  *
  * a station's information
  */
@@ -4410,6 +4437,7 @@ struct sir_peer_info {
 	int8_t rssi;
 	uint32_t tx_rate;
 	uint32_t rx_rate;
+	uint32_t rx_mc_bc_cnt;
 };
 
 /**
@@ -4492,6 +4520,17 @@ struct sir_peer_info_ext_resp {
 struct sir_peer_sta_info {
 	uint8_t sta_num;
 	struct sir_peer_info info[MAX_PEER_STA];
+};
+
+/**
+ * @sta_num: number of peer station which has valid info
+ * @info: peer extended information
+ *
+ * all SAP peer station's extended information retrieved
+ */
+struct sir_peer_sta_ext_info {
+	uint8_t sta_num;
+	struct sir_peer_info_ext info[MAX_PEER_STA];
 };
 
 typedef struct sSirAddPeriodicTxPtrn {
@@ -6029,9 +6068,9 @@ struct sir_wifi_peer_signal_stats {
 	/* Background noise */
 	int32_t nf[WIFI_MAX_CHAINS];
 
-	int32_t per_ant_rx_mpdus[WIFI_MAX_CHAINS];
-	int32_t per_ant_tx_mpdus[WIFI_MAX_CHAINS];
-	int32_t num_chain;
+	uint32_t per_ant_rx_mpdus[WIFI_MAX_CHAINS];
+	uint32_t per_ant_tx_mpdus[WIFI_MAX_CHAINS];
+	uint32_t num_chain;
 };
 
 #define WIFI_VDEV_NUM     4
@@ -6663,7 +6702,6 @@ typedef void (*hw_mode_transition_cb)(uint32_t old_hw_mode_index,
 		struct sir_vdev_mac_map *vdev_mac_map);
 typedef void (*dual_mac_cb)(uint32_t status, uint32_t scan_config,
 		uint32_t fw_mode_config);
-typedef void (*antenna_mode_cb)(uint32_t status);
 
 /**
  * struct sir_nss_update_request
@@ -7999,6 +8037,9 @@ struct sme_rcpi_req {
  * @dad_detected: dad detected
  * @connect_status: connection status
  * @ba_session_establishment_status: BA session status
+ * @connect_stats_present: connectivity stats present or not
+ * @tcp_ack_recvd: tcp syn ack's count
+ * @icmpv4_rsp_recvd: icmpv4 responses count
  */
 struct rsp_stats {
 	uint32_t vdev_id;
@@ -8010,6 +8051,9 @@ struct rsp_stats {
 	uint32_t dad_detected;
 	uint32_t connect_status;
 	uint32_t ba_session_establishment_status;
+	bool connect_stats_present;
+	uint32_t tcp_ack_recvd;
+	uint32_t icmpv4_rsp_recvd;
 };
 
 /**
@@ -8018,12 +8062,22 @@ struct rsp_stats {
  * @flag: enable/disable stats
  * @pkt_type: type of packet(1 - arp)
  * @ip_addr: subnet ipv4 address in case of encrypted packets
+ * @pkt_type_bitmap: pkt bitmap
+ * @tcp_src_port: tcp src port for pkt tracking
+ * @tcp_dst_port: tcp dst port for pkt tracking
+ * @icmp_ipv4: target ipv4 address to track ping packets
+ * @reserved: reserved
  */
 struct set_arp_stats_params {
 	uint32_t vdev_id;
 	uint8_t flag;
 	uint8_t pkt_type;
 	uint32_t ip_addr;
+	uint32_t pkt_type_bitmap;
+	uint32_t tcp_src_port;
+	uint32_t tcp_dst_port;
+	uint32_t icmp_ipv4;
+	uint32_t reserved;
 };
 
 /**
@@ -8265,4 +8319,15 @@ struct sir_limit_off_chan {
 	uint32_t rest_time;
 	bool skip_dfs_chans;
 };
+
+/**
+ * struct set_pcl_req - Request message to set the PCL
+ * @chan_weights: PCL channel weights
+ * @band: Supported band
+ */
+struct set_pcl_req {
+	struct wmi_pcl_chan_weights chan_weights;
+	tSirRFBand band;
+};
+
 #endif /* __SIR_API_H */

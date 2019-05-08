@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -83,11 +83,9 @@ enum cds_driver_state {
 /**
  * enum cds_fw_state - Firmware state
  * @CDS_FW_STATE_UNINITIALIZED: Firmware is in uninitialized state.
- * CDS_FW_STATE_DOWN: Firmware is down.
  */
 enum cds_fw_state {
 	CDS_FW_STATE_UNINITIALIZED = 0,
-	CDS_FW_STATE_DOWN,
 };
 
 #define __CDS_IS_FW_STATE(_state, _mask) (((_state) & (_mask)) == (_mask))
@@ -256,9 +254,7 @@ static inline int cds_is_module_state_transitioning(void)
  */
 static inline bool cds_is_fw_down(void)
 {
-	enum cds_fw_state state = cds_get_fw_state();
-
-	return __CDS_IS_FW_STATE(state, BIT(CDS_FW_STATE_DOWN));
+	return pld_is_fw_down();
 }
 
 /**
@@ -500,7 +496,20 @@ void cds_pkt_stats_to_logger_thread(void *pl_hdr, void *pkt_dump, void *data);
 QDF_STATUS cds_register_dp_cb(struct cds_dp_cbacks *dp_cbs);
 QDF_STATUS cds_deregister_dp_cb(void);
 
-uint32_t cds_get_arp_stats_gw_ip(void);
+/**
+ * cds_get_arp_stats_gw_ip() - get arp stats track IP
+ * @context: osif dev
+ *
+ * Return: ARP stats IP to track.
+ */
+uint32_t cds_get_arp_stats_gw_ip(void *context);
+/**
+ * cds_get_connectivity_stats_pkt_bitmap() - get pkt-type bitmap
+ * @context: osif dev context
+ *
+ * Return: pkt bitmap to track
+ */
+uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context);
 void cds_incr_arp_stats_tx_tgt_delivered(void);
 void cds_incr_arp_stats_tx_tgt_acked(void);
 

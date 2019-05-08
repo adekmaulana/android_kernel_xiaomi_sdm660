@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1844,9 +1844,9 @@ enum hdd_dot11_mode {
  * </ini>
  */
 #define CFG_11AG_NUM_TX_CHAIN_NAME      "g11agNumTxChains"
-#define CFG_11AG_NUM_TX_CHAIN_MIN       (1)
-#define CFG_11AG_NUM_TX_CHAIN_MAX       (4)
-#define CFG_11AG_NUM_TX_CHAIN_DEFAULT   (1)
+#define CFG_11AG_NUM_TX_CHAIN_MIN       (0)
+#define CFG_11AG_NUM_TX_CHAIN_MAX       (2)
+#define CFG_11AG_NUM_TX_CHAIN_DEFAULT   (0)
 
 /*
  * <ini>
@@ -2148,6 +2148,53 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
+ * min_delay_btw_roam_scans - Min duration (in sec) allowed btw two
+ * consecutive roam scans
+ * @Min: 0
+ * @Max: 60
+ * @Default: 10
+ *
+ * Roam scan is not allowed if duration between two consecutive
+ * roam scans is less than this time.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_NAME    "min_delay_btw_roam_scans"
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_MIN     (0)
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_MAX     (60)
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_DEFAULT (10)
+
+/*
+ * <ini>
+ * roam_trigger_reason_bitmask - Contains roam_trigger_reasons
+ * @Min: 0
+ * @Max: 0xFFFFFFFF
+ * @Default: 0xDA
+ *
+ * Bitmask containing roam_trigger_reasons for which
+ * min_delay_btw_roam_scans constraint should be applied.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_NAME "roam_trigger_reason_bitmask"
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MIN     (0)
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MAX     (0xFFFFFFFF)
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_DEFAULT (0xDA)
+
+/*
+ * <ini>
  * roam_bad_rssi_thresh_offset_2g - RSSI threshold offset for 2G to 5G roam
  * @Min: 0
  * @Max: 86
@@ -2175,6 +2222,56 @@ enum hdd_dot11_mode {
 #define CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MIN     (0)
 #define CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MAX     (86)
 #define CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_DEFAULT (40)
+
+/*
+ * <ini>
+ * ho_delay_for_rx - Delay Hand-off (In msec) by this duration to receive
+ * pending rx frames from current BSS
+ * @Min: 0
+ * @Max: 200
+ * @Default: 0
+ *
+ * For LFR 3.0 roaming scenario, once roam candidate is found, firmware
+ * waits for minimum this much duration to receive pending rx frames from
+ * current BSS before switching to new channel for handoff to new AP.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_HO_DELAY_FOR_RX_NAME    "ho_delay_for_rx"
+#define CFG_ROAM_HO_DELAY_FOR_RX_MIN     (0)
+#define CFG_ROAM_HO_DELAY_FOR_RX_MAX     (200)
+#define CFG_ROAM_HO_DELAY_FOR_RX_DEFAULT (0)
+
+/*
+ * <ini>
+ * roam_force_rssi_trigger - To set roam scan mode
+ * irrespective of channel list
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to set roam scan mode
+ * WMI_ROAM_SCAN_MODE_RSSI_CHANGE, irrespective of whether
+ * channel list type is CHANNEL_LIST_STATIC or not
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_NAME  "roam_force_rssi_trigger"
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_MIN     (0)
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_MAX     (1)
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_DEFAULT (1)
 
 /*
  * <ini>
@@ -2213,7 +2310,7 @@ enum hdd_dot11_mode {
 #define CFG_INTERFACE_CHANGE_WAIT_NAME    "gInterfaceChangeWait"
 #define CFG_INTERFACE_CHANGE_WAIT_MIN     (10)
 #define CFG_INTERFACE_CHANGE_WAIT_MAX     (500000)
-#define CFG_INTERFACE_CHANGE_WAIT_DEFAULT (15000)
+#define CFG_INTERFACE_CHANGE_WAIT_DEFAULT (10000)
 
 /*
  * <ini>
@@ -6788,7 +6885,7 @@ enum hdd_link_speed_rpt_type {
 #define CFG_TDLS_SCAN_ENABLE                       "gEnableTDLSScan"
 #define CFG_TDLS_SCAN_ENABLE_MIN                   (0)
 #define CFG_TDLS_SCAN_ENABLE_MAX                   (1)
-#define CFG_TDLS_SCAN_ENABLE_DEFAULT               (0)
+#define CFG_TDLS_SCAN_ENABLE_DEFAULT               (1)
 
 /*
  * <ini>
@@ -8316,6 +8413,97 @@ enum hdd_link_speed_rpt_type {
 #define CFG_STA_MIRACAST_MCC_REST_TIME_VAL_MAX     (500)
 #define CFG_STA_MIRACAST_MCC_REST_TIME_VAL_DEFAULT (400)
 
+/*
+ * <ini>
+ * sta_scan_burst_duration - Burst duration in case of split scan.
+ * @Min: 0
+ * @Max: 180
+ * @Default: 0
+ *
+ * This ini is used to set burst duration of scan only when STA is active.
+ *
+ * Related: None.
+ *
+ * Supported Feature: Concurrency
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_STA_SCAN_BURST_DURATION_VAL                 "sta_scan_burst_duration"
+#define CFG_STA_SCAN_BURST_DURATION_VAL_MIN             (0)
+#define CFG_STA_SCAN_BURST_DURATION_VAL_MAX             (180)
+#define CFG_STA_SCAN_BURST_DURATION_VAL_DEFAULT         (0)
+
+/*
+ * <ini>
+ * p2p_scan_burst_duration - Burst duration in case of split scan for p2p scan.
+ * @Min: 0
+ * @Max: 180
+ * @Default: 0
+ *
+ * This ini is used to set burst duration of scan for p2p scan requests.
+ *
+ * Related: None.
+ *
+ * Supported Feature: Concurrency
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_P2P_SCAN_BURST_DURATION_VAL                 "p2p_scan_burst_duration"
+#define CFG_P2P_SCAN_BURST_DURATION_VAL_MIN             (0)
+#define CFG_P2P_SCAN_BURST_DURATION_VAL_MAX             (180)
+#define CFG_P2P_SCAN_BURST_DURATION_VAL_DEFAULT         (0)
+
+/*
+ * <ini>
+ * go_scan_burst_duration - Burst duration in case of split scan when GO is
+ * active.
+ * @Min: 0
+ * @Max: 180
+ * @Default: 0
+ *
+ * This ini is used to set burst duration of scan when GO is active.
+ *
+ * Related: None.
+ *
+ * Supported Feature: Concurrency
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_GO_SCAN_BURST_DURATION_VAL                 "go_scan_burst_duration"
+#define CFG_GO_SCAN_BURST_DURATION_VAL_MIN             (0)
+#define CFG_GO_SCAN_BURST_DURATION_VAL_MAX             (180)
+#define CFG_GO_SCAN_BURST_DURATION_VAL_DEFAULT         (0)
+
+/*
+ * <ini>
+ * ap_scan_burst_duration - Burst duration in case of split scan when ap
+ * is active.
+ * @Min: 0
+ * @Max: 32
+ * @Default: 0
+ *
+ * This ini is used to set burst duration of scan when SAP is active.
+ *
+ * Related: None.
+ *
+ * Supported Feature: Concurrency
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_AP_SCAN_BURST_DURATION_VAL                 "ap_scan_burst_duration"
+#define CFG_AP_SCAN_BURST_DURATION_VAL_MIN             (0)
+#define CFG_AP_SCAN_BURST_DURATION_VAL_MAX             (32)
+#define CFG_AP_SCAN_BURST_DURATION_VAL_DEFAULT         (0)
+
+
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 /*
  * <ini>
@@ -8756,6 +8944,7 @@ enum dot11p_mode {
  *			scan policy disabled.
  * 4 - enable DBS for connection as well as for scan with async
  *			scan policy disabled.
+ * 5 - enable DBS for connection but disable dbs for scan.
  *
  * Note: INI item value should match 'enum dbs_support'
  *
@@ -8769,7 +8958,7 @@ enum dot11p_mode {
  */
 #define CFG_DUAL_MAC_FEATURE_DISABLE               "gDualMacFeatureDisable"
 #define CFG_DUAL_MAC_FEATURE_DISABLE_MIN          (0)
-#define CFG_DUAL_MAC_FEATURE_DISABLE_MAX          (4)
+#define CFG_DUAL_MAC_FEATURE_DISABLE_MAX          (5)
 #define CFG_DUAL_MAC_FEATURE_DISABLE_DEFAULT      (0)
 
 /*
@@ -11495,6 +11684,8 @@ enum hw_filter_mode {
  * <ini>
  * gActionOUIConnect1x1 - Used to specify action OUIs for 1x1 connection
  * @Default: 000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C
+ * Note: User should strictly add new action OUIs at the end of this
+ * default value.
  *
  * Default OUIs: (All values in Hex)
  * OUI 1 : 000C43
@@ -11535,7 +11726,22 @@ enum hw_filter_mode {
 /*
  * <ini>
  * gActionOUIITOExtension - Used to extend in-activity time for specified APs
- * @Default: Empty string
+ * @Default: 00037F 06 01010000FF7F FC 01 000AEB 02 0100 C0 01
+ * Note: User should strictly add new action OUIs at the end of this
+ * default value.
+ *
+ * Default OUIs: (All values in Hex)
+ * OUI 1: 00037F
+ *   OUI data Len: 06
+ *   OUI Data: 01010000FF7F
+ *   OUI data Mask: FC - 11111100
+ *   Info Mask : 01 - only OUI present in Info mask
+ *
+ * OUI 2: 000AEB
+ *   OUI data Len: 02
+ *   OUI Data: 0100
+ *   OUI data Mask: C0 - 11000000
+ *   Info Mask : 01 - only OUI present in Info mask
  *
  * This ini is used to specify AP OUIs using which station's in-activity time
  * can be extended with the respective APs
@@ -11549,7 +11755,7 @@ enum hw_filter_mode {
  * </ini>
  */
 #define CFG_ACTION_OUI_ITO_EXTENSION_NAME    "gActionOUIITOExtension"
-#define CFG_ACTION_OUI_ITO_EXTENSION_DEFAULT ""
+#define CFG_ACTION_OUI_ITO_EXTENSION_DEFAULT "00037F 06 01010000FF7F FC 01 000AEB 02 0100 C0 01"
 
 /*
  * <ini>
@@ -12997,10 +13203,445 @@ enum hw_filter_mode {
 #define CFG_CHAN_SWITCH_HOSTAPD_RATE_ENABLED_DEFAULT (0)
 
 
-/*---------------------------------------------------------------------------
-   Type declarations
-   -------------------------------------------------------------------------*/
+#define OFFLOAD_11K_BITMASK_NEIGHBOR_REPORT_REQUEST  0x1
 
+/*
+ * <ini>
+ * 11k_offload_enable_bitmask - Bitmask to enable 11k offload to FW
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to set which of the 11k features is offloaded to FW
+ * Currently Neighbor Report Request is supported for offload and is enabled
+ * by default
+ * B0: Offload 11k neighbor report requests
+ * B1-B31: Reserved
+ *
+ * Related : None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_OFFLOAD_11K_ENABLE_BITMASK_NAME    "11k_offload_enable_bitmask"
+#define CFG_OFFLOAD_11K_ENABLE_BITMASK_MIN     (0)
+#define CFG_OFFLOAD_11K_ENABLE_BITMASK_MAX     (1)
+#define CFG_OFFLOAD_11K_ENABLE_BITMASK_DEFAULT (1)
+
+/*
+ * <ini>
+ * nr_offload_params_bitmask - bitmask to specify which of the
+ * neighbor report offload params are valid in the ini
+ * frame
+ * @Min: 0
+ * @Max: 63
+ * @Default: 63
+ *
+ * This ini specifies which of the neighbor report offload params are valid
+ * and should be considered by the FW. The bitmask is as follows
+ * B0: nr_offload_time_offset
+ * B1: nr_offload_low_rssi_offset
+ * B2: nr_offload_bmiss_count_trigger
+ * B3: nr_offload_per_threshold_offset
+ * B4: nr_offload_cache_timeout
+ * B5: nr_offload_max_req_cap
+ * B6-B7: Reserved
+ *
+ * Related : 11k_offload_enable_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_NAME \
+	"nr_offload_params_bitmask"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_MIN      (0)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_MAX      (63)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PARAMS_BITMASK_DEFAULT  (63)
+
+/*
+ * <ini>
+ * nr_offload_time_offset - time interval in seconds after the
+ * neighbor report offload command to send the first neighbor report request
+ * frame
+ * @Min: 0
+ * @Max: 3600
+ * @Default: 30
+ *
+ * Related : nr_offload_params_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_NAME \
+	"nr_offload_time_offset"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_MIN      (0)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_MAX      (3600)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_TIME_OFFSET_DEFAULT  (30)
+
+/*
+ * <ini>
+ * nr_offload_low_rssi_offset - offset from the roam RSSI threshold
+ * to trigger the neighbor report request frame (in dBm)
+ * @Min: 4
+ * @Max: 10
+ * @Default: 4
+ *
+ * Related : nr_offload_params_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_NAME \
+	"nr_offload_low_rssi_offset"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_MIN     (4)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_MAX     (10)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_LOW_RSSI_OFFSET_DEFAULT (4)
+
+/*
+ * <ini>
+ * nr_offload_bmiss_count_trigger - Number of beacon miss events to
+ * trigger a neighbor report request frame
+ * @Min: 1
+ * @Max: 5
+ * @Default: 1
+ *
+ * Related : nr_offload_params_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_NAME \
+	"nr_offload_bmiss_count_trigger"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_MIN     (1)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_MAX     (5)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_BMISS_COUNT_TRIGGER_DEFAULT (1)
+
+/*
+ * <ini>
+ * nr_offload_per_threshold_offset - offset from PER threshold to
+ * trigger a neighbor report request frame (in %)
+ * @Min: 5
+ * @Max: 20
+ * @Default: 5
+ *
+ * This ini is used to set the neighbor report offload parameter:
+ *
+ * Related : nr_offload_params_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_NAME \
+	"nr_offload_per_threshold_offset"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_MIN     (5)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_MAX     (20)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_PER_THRESHOLD_OFFSET_DEFAULT (5)
+
+/*
+ * <ini>
+ * nr_offload_cache_timeout - time in seconds after which the
+ * neighbor report cache is marked as timed out and any of the triggers would
+ * cause a neighbor report request frame to be sent.
+ * @Min: 5
+ * @Max: 86400
+ * @Default: 1200
+ *
+ * Related : nr_offload_params_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_NAME \
+	"nr_offload_cache_timeout"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_MIN     (5)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_MAX     (86400)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_CACHE_TIMEOUT_DEFAULT (1200)
+
+/*
+ * <ini>
+ * nr_offload_max_req_cap - Max number of neighbor
+ * report requests that can be sent to a connected peer in the current session.
+ * This counter is reset once a successful roam happens or at cache timeout
+ * @Min: 3
+ * @Max: 300
+ * @Default: 3
+ *
+ * Related : nr_offload_params_bitmask
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_NAME \
+	"nr_offload_max_req_cap"
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_MIN     (3)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_MAX     (300)
+#define CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_DEFAULT (3)
+
+/*
+ * <ini>
+ * gTxSchDelay - Enable/Disable Tx sch delay
+ * @Min: 0
+ * @Max: 5
+ * @Default: 2
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_SCH_DELAY_NAME          "gTxSchDelay"
+#define CFG_TX_SCH_DELAY_MIN           (0)
+#define CFG_TX_SCH_DELAY_MAX           (5)
+#define CFG_TX_SCH_DELAY_DEFAULT       (2)
+
+/*
+ * <ini>
+ * gEnableUnitTestFramework - Enable/Disable unit test framework
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * Usage: Internal (only for dev and test team)
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_UNIT_TEST_FRAMEWORK_NAME    "gEnableUnitTestFramework"
+#define CFG_ENABLE_UNIT_TEST_FRAMEWORK_MIN     (0)
+#define CFG_ENABLE_UNIT_TEST_FRAMEWORK_MAX     (1)
+#define CFG_ENABLE_UINT_TEST_FRAMEWORK_DEFAULT (0)
+
+/*
+ * <ini>
+ * force_rsne_override - force rsnie override from user
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable/disable test mode to force rsne override used in
+ * security enhancement test cases to pass the RSNIE sent by user in
+ * assoc request.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ *
+ * Usage: internal
+ *
+ * </ini>
+ */
+#define CFG_FORCE_RSNE_OVERRIDE_NAME    "force_rsne_override"
+#define CFG_FORCE_RSNE_OVERRIDE_MIN     (0)
+#define CFG_FORCE_RSNE_OVERRIDE_MAX     (1)
+#define CFG_FORCE_RSNE_OVERRIDE_DEFAULT (0)
+/*
+ * <ini>
+ * roam_preauth_retry_count
+ *
+ * @Min: 1
+ * @Max: 10
+ * @Default: 5
+ *
+ * The maximum number of software retries for preauth or
+ * reassoc made before picking up the next candidate for
+ * connection during roaming.
+ *
+ * Related: N/A
+ *
+ * Supported Features: Roaming
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_PREAUTH_RETRY_COUNT_NAME    "roam_preauth_retry_count"
+#define CFG_ROAM_PREAUTH_RETRY_COUNT_MIN     (1)
+#define CFG_ROAM_PREAUTH_RETRY_COUNT_MAX     (10)
+#define CFG_ROAM_PREAUTH_RETRY_COUNT_DEFAULT (5)
+
+/*
+ * <ini>
+ * roam_preauth_no_ack_timeout
+ *
+ * @Min: 5
+ * @Max: 50
+ * @Default: 5
+ *
+ * Time to wait (in ms) after sending an preauth or reassoc
+ * request which didn’t have an ack, before considering
+ * it as a failure and making another software retry.
+ *
+ * Related: N/A
+ *
+ * Supported Features: Roaming
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_NAME    "roam_preauth_no_ack_timeout"
+#define CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_MIN     (5)
+#define CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_MAX     (50)
+#define CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_DEFAULT (5)
+
+/*
+ * <ini>
+ * btm_offload_config - Configure BTM
+ * @Min: 0x00000000
+ * @Max: 0xFFFFFFFF
+ * @Default: 0x00000001
+ *
+ * This ini is used to configure BTM
+ *
+ * Bit 0: Enable/Disable the BTM offload. Set this to 1 will
+ * enable and 0 will disable BTM offload.
+ *
+ * BIT 2, 1: Action on non matching candidate with cache. If a BTM request
+ * is received from AP then the candidate AP's may/may-not be present in
+ * the firmware scan cache . Based on below config firmware will decide
+ * whether to forward BTM frame to host or consume with firmware and proceed
+ * with Roaming to candidate AP.
+ * 00 scan and consume
+ * 01 no scan and forward to host
+ * 10, 11 reserved
+ *
+ * BIT 5, 4, 3: Roaming handoff decisions on multiple candidates match
+ * 000 match if exact BSSIDs are found
+ * 001 match if at least one top priority BSSID only
+ * 010, 011, 100, 101, 110, 111 reserved
+ *
+ * BIT 6: Set this to 1 will send BTM query frame and 0 not sent.
+ *
+ * BIT 7: Roam to BTM candidates based on the roam score instead of BTM
+ * preferred value
+ *
+ * BIT 8: If AP does not support Neighbor report response, STA should
+ * request BTM query to get BTM request and check neighbor report exists
+ * or not. If Neighbor report exists, STA can use this information to update
+ * cached channel information
+ *
+ * BIT 9: When ever roaming is triggered after a successful roam scan a BTM
+ * query is sends to current connected AP which is 11v capable including the
+ * preferred candidate list obtained as part of roam scan with preference filled
+ * based on our internal scoring logic.
+ *
+ * BIT 10-31: Reserved
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_ENABLE_NAME      "btm_offload_config"
+#define CFG_BTM_ENABLE_MIN       (0x00000000)
+#define CFG_BTM_ENABLE_MAX       (0xffffffff)
+#define CFG_BTM_ENABLE_DEFAULT   (0x00000001)
+
+/*
+ * <ini>
+ * btm_solicited_timeout - timeout value for waiting BTM request
+ * @Min: 1
+ * @Max: 10000
+ * @Default: 100
+ *
+ * This ini is used to configure timeout value for waiting BTM request.
+ * Unit: millionsecond
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_SOLICITED_TIMEOUT           "btm_solicited_timeout"
+#define CFG_BTM_SOLICITED_TIMEOUT_MIN       (1)
+#define CFG_BTM_SOLICITED_TIMEOUT_MAX       (10000)
+#define CFG_BTM_SOLICITED_TIMEOUT_DEFAULT   (100)
+
+/*
+ * <ini>
+ * btm_max_attempt_cnt - Maximum attempt for sending BTM query to ESS
+ * @Min: 1
+ * @Max: 0xFFFFFFFF
+ * @Default: 3
+ *
+ * This ini is used to configure maximum attempt for sending BTM query to ESS.
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_MAX_ATTEMPT_CNT           "btm_max_attempt_cnt"
+#define CFG_BTM_MAX_ATTEMPT_CNT_MIN       (0x00000001)
+#define CFG_BTM_MAX_ATTEMPT_CNT_MAX       (0xFFFFFFFF)
+#define CFG_BTM_MAX_ATTEMPT_CNT_DEFAULT   (0x00000003)
+
+/*
+ * <ini>
+ * sticky_time - Stick time after roaming to new AP by BTM
+ * @Min: 1
+ * @Max: 0x0000FFFF
+ * @Default: 300
+ *
+ * This ini is used to configure Stick time after roaming to new AP by BTM.
+ * Unit: seconds
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_STICKY_TIME           "btm_sticky_time"
+#define CFG_BTM_STICKY_TIME_MIN       (0x00000001)
+#define CFG_BTM_STICKY_TIME_MAX       (0x0000FFFF)
+#define CFG_BTM_STICKY_TIME_DEFAULT   (300)
+
+/*
+ * <ini>
+ * btm_query_bitmask - To send BTM query with candidate list on various roam
+ * scans reasons
+ * @Min: 0
+ * @Max: 0xFFFFFFFF
+ * @Default: 0x8
+ *
+ * This new ini is introduced to configure the bitmask for various roam scan
+ * reasons. Fw sends "BTM query with preferred candidate list" only for those
+ * roam scans which are enable through this bitmask.
+
+ * For Example:
+ * Bitmask : 0x8 (LOW_RSSI) refer enum WMI_ROAM_TRIGGER_REASON_ID
+ * Bitmask : 0xDA (PER, LOW_RSSI, HIGH_RSSI, MAWC, DENSE)
+ * refer enum WMI_ROAM_TRIGGER_REASON_ID
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_QUERY_BITMASK_NAME    "btm_query_bitmask"
+#define CFG_BTM_QUERY_BITMASK_MIN     (0)
+#define CFG_BTM_QUERY_BITMASK_MAX     (0xFFFFFFFF)
+#define CFG_BTM_QUERY_BITMASK_DEFAULT (0x8)
+
+/*
+ * Type declarations
+ */
 
 struct hdd_config {
 	/* Bitmap to track what is explicitly configured */
@@ -13579,6 +14220,10 @@ struct hdd_config {
 	uint8_t is_sta_connection_in_5gz_enabled;
 	uint16_t p2p_listen_defer_interval;
 	uint32_t sta_miracast_mcc_rest_time_val;
+	uint32_t sta_scan_burst_duration;
+	uint32_t p2p_scan_burst_duration;
+	uint32_t go_scan_burst_duration;
+	uint32_t ap_scan_burst_duration;
 	bool is_ramdump_enabled;
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	bool sap_channel_avoidance;
@@ -13657,6 +14302,9 @@ struct hdd_config {
 	uint32_t roam_dense_min_aps;
 	int8_t roam_bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
+	uint32_t ho_delay_for_rx;
+	uint32_t min_delay_btw_roam_scans;
+	uint32_t roam_trigger_reason_bitmask;
 	uint32_t roam_bg_scan_client_bitmap;
 	bool enable_edca_params;
 	uint32_t edca_vo_cwmin;
@@ -13848,6 +14496,26 @@ struct hdd_config {
 	uint32_t oce_wan_score_slots15_to_12;
 	bool enable_scoring_for_roam;
 	bool chan_switch_hostapd_rate_enabled;
+	bool is_11k_offload_supported;
+	uint32_t offload_11k_enable_bitmask;
+	uint32_t neighbor_report_offload_params_bitmask;
+	uint32_t neighbor_report_offload_time_offset;
+	uint32_t neighbor_report_offload_low_rssi_offset;
+	uint32_t neighbor_report_offload_bmiss_count_trigger;
+	uint32_t neighbor_report_offload_per_threshold_offset;
+	uint32_t neighbor_report_offload_cache_timeout;
+	uint32_t neighbor_report_offload_max_req_cap;
+	uint8_t enable_tx_sch_delay;
+	bool force_rsne_override;
+	bool roam_force_rssi_trigger;
+	bool is_unit_test_framework_enabled;
+	uint32_t roam_preauth_retry_count;
+	uint32_t roam_preauth_no_ack_timeout;
+	uint32_t btm_offload_config;
+	uint32_t btm_solicited_timeout;
+	uint32_t btm_max_attempt_cnt;
+	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

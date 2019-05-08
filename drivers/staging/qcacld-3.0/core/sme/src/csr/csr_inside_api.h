@@ -940,6 +940,20 @@ QDF_STATUS csr_roam_set_pmkid_cache(tpAniSirGlobal pMac, uint32_t sessionId,
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /*
+ * csr_get_pmk_info(): store PMK in pmk_cache
+ * @mac_ctx: pointer to global structure for MAC
+ * @session_id: Sme session id
+ * @pmk_cache: pointer to a structure of Pmk
+ *
+ * This API gets the PMK from the session and
+ * stores it in the pmk_cache
+ *
+ * Return: none
+ */
+void csr_get_pmk_info(tpAniSirGlobal mac_ctx, uint8_t session_id,
+		      tPmkidCacheInfo *pmk_cache);
+
+/*
  * csr_roam_set_psk_pmk() -
  * store PSK/PMK
  * pMac  - pointer to global structure for MAC
@@ -1285,4 +1299,17 @@ static inline bool csr_is_mfpc_capable(struct sDot11fIERSN *rsn)
 }
 #endif
 
+/**
+ * csr_lookup_pmkid_using_bssid() - lookup pmkid using bssid
+ * @mac: pointer to mac
+ * @session: sme session pointer
+ * @pmk_cache: pointer to pmk cache
+ * @index: index value needs to be seached
+ *
+ * Return: true if pmkid is found else false
+ */
+bool csr_lookup_pmkid_using_bssid(tpAniSirGlobal mac,
+				  tCsrRoamSession *session,
+				  tPmkidCacheInfo *pmk_cache,
+				  uint32_t *index);
 #endif /* CSR_INSIDE_API_H__ */

@@ -356,9 +356,8 @@ typedef struct tagCsrEseCckmInfo {
 #endif
 } tCsrEseCckmInfo;
 
-#define CSR_DOT11F_IE_RSN_MAX_LEN   (114)
 typedef struct tagCsrEseCckmIe {
-	uint8_t cckmIe[CSR_DOT11F_IE_RSN_MAX_LEN];
+	uint8_t cckmIe[DOT11F_IE_RSN_MAX_LEN];
 	uint8_t cckmIeLen;
 } tCsrEseCckmIe;
 #endif /* FEATURE_WLAN_ESE */
@@ -413,6 +412,7 @@ typedef struct tagCsrScanResultFilter {
 	struct sCsrChannel_ pcl_channels;
 	struct qdf_mac_addr bssid_hint;
 	enum tQDF_ADAPTER_MODE csrPersona;
+	bool ignore_pmf_cap;
 #ifdef WLAN_FEATURE_FILS_SK
 	bool realm_check;
 	uint8_t fils_realm[2];
@@ -1003,7 +1003,9 @@ typedef struct tagCsrRoamProfile {
 	tSirMacRateSet  extended_rates;
 	struct qdf_mac_addr bssid_hint;
 	bool force_24ghz_in_ht20;
-	bool do_not_roam;
+	bool supplicant_disabled_roaming;
+	bool roaming_allowed_on_iface;
+	bool driver_disabled_roaming;
 #ifdef WLAN_FEATURE_FILS_SK
 	bool fils_connection;
 	uint8_t *hlp_ie;
@@ -1011,6 +1013,7 @@ typedef struct tagCsrRoamProfile {
 	struct cds_fils_connection_info *fils_con_info;
 #endif
 	bool chan_switch_hostapd_rate_enabled;
+	bool force_rsne_override;
 } tCsrRoamProfile;
 
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
@@ -1128,6 +1131,32 @@ struct csr_sta_roam_policy_params {
 	enum sta_roam_policy_dfs_mode dfs_mode;
 	bool skip_unsafe_channels;
 	uint8_t sap_operating_band;
+};
+
+/**
+ * struct csr_neighbor_report_offload_params - neighbor report offload params
+ * @params_bitmask: bitmask to specify which of the below are enabled
+ * @time_offset: time offset after 11k offload command to trigger a neighbor
+ *		report request (in seconds)
+ * @low_rssi_offset: Offset from rssi threshold to trigger neighbor
+ *	report request (in dBm)
+ * @bmiss_count_trigger: Number of beacon miss events to trigger neighbor
+ *		report request
+ * @per_threshold_offset: offset from PER threshold to trigger neighbor
+ *		report request (in %)
+ * @neighbor_report_cache_timeout: timeout after which new trigger can enable
+ *		sending of a neighbor report request (in seconds)
+ * @max_neighbor_report_req_cap: max number of neighbor report requests that
+ *		can be sent to the peer in the current session
+ */
+struct csr_neighbor_report_offload_params {
+	uint8_t params_bitmask;
+	uint32_t time_offset;
+	uint32_t low_rssi_offset;
+	uint32_t bmiss_count_trigger;
+	uint32_t per_threshold_offset;
+	uint32_t neighbor_report_cache_timeout;
+	uint32_t max_neighbor_report_req_cap;
 };
 
 typedef struct tagCsrConfigParam {
@@ -1278,6 +1307,11 @@ typedef struct tagCsrConfigParam {
 	uint8_t rx_ldpc_support_for_2g;
 	uint8_t max_amsdu_num;
 	uint8_t nSelect5GHzMargin;
+	uint32_t ho_delay_for_rx;
+	uint32_t roam_preauth_retry_count;
+	uint32_t roam_preauth_no_ack_timeout;
+	uint32_t min_delay_btw_roam_scans;
+	uint32_t roam_trigger_reason_bitmask;
 	uint8_t isCoalesingInIBSSAllowed;
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 	uint8_t cc_switch_mode;
@@ -1312,6 +1346,10 @@ typedef struct tagCsrConfigParam {
 	bool enable5gEBT;
 	bool enableSelfRecovery;
 	uint32_t f_sta_miracast_mcc_rest_time_val;
+	uint32_t sta_scan_burst_duration;
+	uint32_t p2p_scan_burst_duration;
+	uint32_t go_scan_burst_duration;
+	uint32_t ap_scan_burst_duration;
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	bool sap_channel_avoidance;
 #endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
@@ -1365,6 +1403,14 @@ typedef struct tagCsrConfigParam {
 	uint32_t scan_probe_repeat_time;
 	uint32_t scan_num_probes;
 	struct sir_score_config bss_score_params;
+	uint32_t offload_11k_enable_bitmask;
+	struct csr_neighbor_report_offload_params neighbor_report_offload;
+	bool roam_force_rssi_trigger;
+	uint32_t btm_offload_config;
+	uint32_t btm_solicited_timeout;
+	uint32_t btm_max_attempt_cnt;
+	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
 } tCsrConfigParam;
 
 /* Tush */
@@ -1411,6 +1457,7 @@ typedef struct tagCsrRoamInfo {
 	tSirResultCodes statusCode;
 	/* this'd be our own defined or sent from otherBSS(per 802.11spec) */
 	uint32_t reasonCode;
+	uint8_t disassoc_reason;
 	uint8_t staId;         /* Peer stationId when connected */
 	/*
 	 * The DPU signatures will be sent eventually to TL to help it
@@ -1519,6 +1566,11 @@ typedef struct tagCsrRoamInfo {
 #ifdef WLAN_FEATURE_FILS_SK
 	struct fils_join_rsp_params *fils_join_rsp;
 #endif
+	int rssi;
+	int tx_rate;
+	int rx_rate;
+	tSirMacCapabilityInfo capability_info;
+	uint32_t rx_mc_bc_cnt;
 } tCsrRoamInfo;
 
 typedef struct tagCsrFreqScanInfo {
@@ -1562,6 +1614,7 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf {
 
 	tDot11fIEHTCaps HTCaps;
 	tDot11fIEVHTCaps VHTCaps;
+	tSirMacCapabilityInfo capability_info;
 } tSirSmeAssocIndToUpperLayerCnf, *tpSirSmeAssocIndToUpperLayerCnf;
 
 typedef struct tagCsrSummaryStatsInfo {
