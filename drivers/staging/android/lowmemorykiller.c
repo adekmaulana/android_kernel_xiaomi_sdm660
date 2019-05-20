@@ -47,6 +47,7 @@
 #include <linux/circ_buf.h>
 #include <linux/proc_fs.h>
 #include <linux/slab.h>
+#include <linux/poll.h>
 
 #define CONFIG_CONVERT_ADJ_TO_SCORE_ADJ
 
